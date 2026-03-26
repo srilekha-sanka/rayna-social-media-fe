@@ -385,6 +385,130 @@
   margin: 0 auto;
 }
 
+/* ========== Instagram Action Card ========== */
+.action-card--ig {
+  border-color: #E4405F;
+  background: linear-gradient(135deg, #fdf2f8, #fef7ff);
+}
+
+.action-card--ig:hover {
+  border-color: #d62d4a;
+  box-shadow: 0 4px 16px rgba(228, 64, 95, 0.2);
+}
+
+.action-card--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.action-card__icon--ig {
+  background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  color: #fff;
+}
+
+/* ========== Instagram Publish Button ========== */
+.btn--ig {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn--ig:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(228, 64, 95, 0.35);
+}
+
+/* ========== Instagram Publish Info ========== */
+.ig-publish-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #fdf2f8, #fef7ff);
+  border: 1px solid #fbcfe8;
+  font-size: 14px;
+  font-weight: 600;
+  color: #be185d;
+}
+
+/* ========== Toast Notification ========== */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  animation: toast-in 0.3s ease-out;
+  max-width: 440px;
+}
+
+.toast--success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.toast--error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.toast__icon {
+  font-size: 20px;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.toast__message {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.toast__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  display: flex;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.toast__close:hover {
+  opacity: 1;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ========== Coming Soon ========== */
 .coming-soon {
   text-align: center;

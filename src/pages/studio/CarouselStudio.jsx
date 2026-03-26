@@ -21,7 +21,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   fetchProducts, generateCarousel, pollJob, getMediaUrl,
   submitPost, approvePost, rejectPost, publishPost, schedulePost,
+  checkInstagramCredentials, publishToInstagram,
 } from '../../services/api';
+import { FaInstagram } from 'react-icons/fa6';
 import { PLATFORMS } from '../../utils/platforms';
 import '../../styles/pages.css';
 import '../../styles/pipeline.css';
@@ -55,6 +57,13 @@ function CarouselStudio() {
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(null);
 
+  // ─── Instagram Integration ───────────────────────────
+  const [igConnected, setIgConnected] = useState(false);
+  const [igLoading, setIgLoading] = useState(false);
+  const [showIgConfirm, setShowIgConfirm] = useState(false);
+  const [igPublishResult, setIgPublishResult] = useState(null);
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message }
+
   async function loadProducts() {
     try {
       setProductsLoading(true);
@@ -70,6 +79,28 @@ function CarouselStudio() {
   }
 
   useEffect(() => { loadProducts(); }, []);
+
+  // Check Instagram credentials on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function checkIg() {
+      try {
+        const creds = await checkInstagramCredentials();
+        if (!cancelled) setIgConnected(!!creds?.configured);
+      } catch {
+        if (!cancelled) setIgConnected(false);
+      }
+    }
+    checkIg();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     function handleClick(e) {
@@ -160,6 +191,8 @@ function CarouselStudio() {
     setError(null);
     setPostStatus(null);
     setActionLoading(null);
+    setIgPublishResult(null);
+    setToast(null);
   }
 
   async function handleAction(action) {
@@ -192,6 +225,34 @@ function CarouselStudio() {
       setActionLoading(null);
     }
   }
+
+  async function handleInstagramPublish() {
+    if (!postId) return;
+    setIgLoading(true);
+    setShowIgConfirm(false);
+    try {
+      const res = await publishToInstagram(postId);
+      setIgPublishResult(res);
+      setPostStatus('PUBLISHED');
+      setToast({ type: 'success', message: 'Successfully published to Instagram!' });
+    } catch (err) {
+      const msg = err.message || 'Failed to publish to Instagram';
+      if (msg.includes('credentials not configured')) {
+        setToast({ type: 'error', message: 'Instagram credentials not configured. Go to Settings to connect your account.' });
+      } else if (msg.includes('no media')) {
+        setToast({ type: 'error', message: 'Post has no media URLs. Please regenerate the slides.' });
+      } else {
+        setToast({ type: 'error', message: msg });
+      }
+    } finally {
+      setIgLoading(false);
+    }
+  }
+
+  // Instagram publish eligibility
+  const canPublishToIg = igConnected
+    && (result?.slides?.length > 0 || result?.post?.media_urls?.length > 0)
+    && (result?.ai_content?.caption || result?.post?.base_content);
 
   const productImage = selectedProduct?.image_urls?.[0] || null;
   const hasOffer = selectedProduct?.offer_label || (selectedProduct?.compare_at_price && Number(selectedProduct.compare_at_price) > Number(selectedProduct.price));
@@ -339,6 +400,43 @@ function CarouselStudio() {
                   <div className="action-card__desc">Pick a date & time to post</div>
                 </div>
               </>
+            )}
+          </div>
+        )}
+
+        {/* ─── Instagram Publish Card ─── */}
+        {currentStatus !== 'PUBLISHED' && currentStatus !== 'SCHEDULED' && igConnected && (
+          <div style={{ marginBottom: 28 }}>
+            <div
+              className={`action-card action-card--ig${!canPublishToIg || igLoading ? ' action-card--disabled' : ''}`}
+              onClick={() => canPublishToIg && !igLoading && setShowIgConfirm(true)}
+            >
+              <div className="action-card__icon action-card__icon--ig">
+                {igLoading
+                  ? <div className="generating-spinner" style={{ width: 22, height: 22, borderWidth: 2, margin: 0 }} />
+                  : <FaInstagram />
+                }
+              </div>
+              <div className="action-card__title">
+                {igLoading ? 'Publishing to Instagram...' : 'Publish to Instagram'}
+              </div>
+              <div className="action-card__desc">
+                {!canPublishToIg && !igLoading
+                  ? 'Needs at least one slide and a caption'
+                  : 'Post directly to your Instagram account'
+                }
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Instagram Publish Success Info ─── */}
+        {igPublishResult && currentStatus === 'PUBLISHED' && (
+          <div className="ig-publish-info" style={{ marginBottom: 24 }}>
+            <FaInstagram style={{ fontSize: 16 }} />
+            <span>Published to Instagram</span>
+            {igPublishResult.media_id && (
+              <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Media ID: {igPublishResult.media_id}</span>
             )}
           </div>
         )}
@@ -530,6 +628,74 @@ function CarouselStudio() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ─── Instagram Confirm Modal ─── */}
+        {showIgConfirm && (
+          <div className="schedule-overlay" onClick={() => setShowIgConfirm(false)}>
+            <div className="schedule-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <FaInstagram style={{ fontSize: 22, color: '#E4405F' }} />
+                <h3 style={{ margin: 0 }}>Publish to Instagram</h3>
+              </div>
+              <p>Review your post before publishing to Instagram.</p>
+
+              {/* Preview image */}
+              {(result.slides?.[0]?.url || result.slides?.[0]?.processed_image) && (
+                <div style={{ marginBottom: 16, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <img
+                    src={getMediaUrl(result.slides[0].url || result.slides[0].processed_image)}
+                    alt="Preview"
+                    style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+              )}
+
+              {/* Caption preview */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 6 }}>Caption</div>
+                <div style={{
+                  fontSize: 13, lineHeight: 1.6, color: 'var(--text-primary)',
+                  background: 'var(--bg-primary)', padding: '12px 14px',
+                  borderRadius: 8, border: '1px solid var(--border)',
+                  maxHeight: 120, overflowY: 'auto', whiteSpace: 'pre-wrap',
+                }}>
+                  {result.ai_content?.caption || result.post?.base_content}
+                </div>
+              </div>
+
+              {/* Hashtags preview */}
+              {(result.ai_content?.hashtags || result.post?.hashtags || []).length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 6 }}>Hashtags</div>
+                  <div style={{ fontSize: 13, color: 'var(--primary)', lineHeight: 1.6 }}>
+                    {(result.ai_content?.hashtags || result.post?.hashtags || []).join(' ')}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button className="btn btn--outline" onClick={() => setShowIgConfirm(false)}>Cancel</button>
+                <button
+                  className="btn btn--ig"
+                  onClick={handleInstagramPublish}
+                >
+                  <FaInstagram /> Publish Now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Toast Notification ─── */}
+        {toast && (
+          <div className={`toast toast--${toast.type}`}>
+            <span className="toast__icon">
+              {toast.type === 'success' ? <MdCheckCircle /> : <MdClose />}
+            </span>
+            <span className="toast__message">{toast.message}</span>
+            <button className="toast__close" onClick={() => setToast(null)}><MdClose size={16} /></button>
           </div>
         )}
       </div>

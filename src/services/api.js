@@ -231,3 +231,28 @@ export async function schedulePost(postId, scheduledAt) {
   });
   return res.payload || res.data;
 }
+
+// ─── Instagram Integration ──────────────────────────────
+
+export async function checkInstagramCredentials() {
+  const res = await request('/instagram/credentials');
+  return res.data || res.payload || res;
+}
+
+export async function publishToInstagram(postId) {
+  const res = await request(`/instagram/publish/${postId}`, { method: 'POST' });
+  return res.data || res.payload || res;
+}
+
+export async function publishToInstagramDirect({ image_url, caption, media_type = 'IMAGE' }) {
+  const res = await request('/instagram/publish', {
+    method: 'POST',
+    body: JSON.stringify({ image_url, caption, media_type }),
+  });
+  return res.data || res.payload || res;
+}
+
+export async function fetchInstagramMedia(limit = 5) {
+  const res = await request(`/instagram/media?limit=${limit}`);
+  return res.data || res.payload || res;
+}
