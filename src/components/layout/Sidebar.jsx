@@ -24,6 +24,7 @@ const navItems = [
       { to: '/campaigns', label: 'Campaigns', icon: <MdCampaign /> },
       { to: '/content', label: 'Content Library', icon: <MdArticle /> },
       { to: '/calendar', label: 'Calendar', icon: <MdCalendarMonth /> },
+      { to: '/content-calendar', label: 'Content Planner', icon: <MdCalendarMonth />, badge: 'AI' },
     ],
   },
   {

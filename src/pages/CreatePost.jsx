@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import { MdCheck, MdArrowForward, MdArrowBack } from 'react-icons/md';
-import StepCampaign from '../components/pipeline/StepCampaign';
-import StepProduct from '../components/pipeline/StepProduct';
-import StepDecisionEngine from '../components/pipeline/StepDecisionEngine';
 import StepContentGeneration from '../components/pipeline/StepContentGeneration';
 import StepMediaEngine from '../components/pipeline/StepMediaEngine';
 import StepPlatformFormat from '../components/pipeline/StepPlatformFormat';
@@ -14,9 +11,6 @@ import '../styles/carousel.css';
 import '../styles/pipeline.css';
 
 const PIPELINE_STEPS = [
-  { id: 'campaign', label: 'Campaign' },
-  { id: 'product', label: 'Selected Product' },
-  { id: 'decision', label: 'Decision Engine' },
   { id: 'content', label: 'AI Content' },
   { id: 'media', label: 'Media Engine' },
   { id: 'platform', label: 'Platforms' },
@@ -28,23 +22,20 @@ function CreatePost() {
   const [currentStep, setCurrentStep] = useState(0);
 
   // Pipeline state
-  const [campaign, setCampaign] = useState({ name: '', city: '', goal: '', target_audience: '', usp: '', start_date: '', end_date: '' });
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [decision, setDecision] = useState({ _mode: 'auto' });
+  const [campaign] = useState({ name: '', city: '', goal: '', target_audience: '', usp: '', start_date: '', end_date: '' });
+  const [selectedProduct] = useState(null);
+  const [decision] = useState({ _mode: 'auto' });
   const [generatedData, setGeneratedData] = useState(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState(['instagram']);
   const [utm, setUtm] = useState({});
-  const [slideCount, setSlideCount] = useState(4);
+  const [slideCount] = useState(4);
 
   function canProceed() {
     switch (currentStep) {
-      case 0: return campaign.name && selectedProduct;
-      case 1: return selectedProduct;
-      case 2: return true;
-      case 3: return generatedData;
-      case 4: return generatedData;
-      case 5: return selectedPlatforms.length > 0;
-      case 6: return true;
+      case 0: return generatedData;
+      case 1: return generatedData;
+      case 2: return selectedPlatforms.length > 0;
+      case 3: return true;
       default: return true;
     }
   }
@@ -79,7 +70,7 @@ function CreatePost() {
     <div>
       <div className="page-header">
         <h2>Create Post</h2>
-        <p>Follow the pipeline — Campaign → Product → AI → Publish.</p>
+        <p>Follow the pipeline — AI Content → Media → Platforms → Publish.</p>
       </div>
 
       {/* Pipeline Tracker */}
@@ -105,28 +96,6 @@ function CreatePost() {
 
       {/* Step Content */}
       {currentStep === 0 && (
-        <StepCampaign
-          data={campaign}
-          onChange={setCampaign}
-          onProductSelect={setSelectedProduct}
-          selectedProduct={selectedProduct}
-        />
-      )}
-
-      {currentStep === 1 && (
-        <StepProduct selectedProduct={selectedProduct} />
-      )}
-
-      {currentStep === 2 && (
-        <StepDecisionEngine
-          data={decision}
-          onChange={setDecision}
-          product={selectedProduct}
-          campaign={campaign}
-        />
-      )}
-
-      {currentStep === 3 && (
         <StepContentGeneration
           product={selectedProduct}
           campaign={campaign}
@@ -137,11 +106,11 @@ function CreatePost() {
         />
       )}
 
-      {currentStep === 4 && (
+      {currentStep === 1 && (
         <StepMediaEngine generatedData={generatedData} />
       )}
 
-      {currentStep === 5 && (
+      {currentStep === 2 && (
         <StepPlatformFormat
           selectedPlatforms={selectedPlatforms}
           onToggle={togglePlatform}
@@ -149,7 +118,7 @@ function CreatePost() {
         />
       )}
 
-      {currentStep === 6 && (
+      {currentStep === 3 && (
         <StepUTMBuilder
           data={utm}
           onChange={setUtm}
@@ -158,7 +127,7 @@ function CreatePost() {
         />
       )}
 
-      {currentStep === 7 && (
+      {currentStep === 4 && (
         <StepApproval
           campaign={campaign}
           product={selectedProduct}

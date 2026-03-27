@@ -1,0 +1,676 @@
+/* ========== Content Calendar ========== */
+
+.cc__header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cc__header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ─── Alert & Toast ─────────────────────────────────────── */
+
+.cc__alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.cc__alert--error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.cc__alert button {
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  display: flex;
+}
+
+.cc__toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--text-primary);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 9999;
+  animation: cc-toast-in 0.25s ease-out;
+  box-shadow: var(--shadow-lg);
+}
+
+@keyframes cc-toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Count Badge ───────────────────────────────────────── */
+
+.cc__count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ─── Loader ────────────────────────────────────────────── */
+
+.cc__loader {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* ─── Plan Cards Grid ───────────────────────────────────── */
+
+.cc__plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.cc__plan-card {
+  position: relative;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cc__plan-card:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.cc__plan-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cc__plan-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.cc__plan-card-dates {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.cc__plan-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.cc__plan-card-platforms {
+  display: flex;
+  gap: 8px;
+  font-size: 16px;
+}
+
+.cc__plan-card-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* ─── Menu Dropdown ─────────────────────────────────────── */
+
+.cc__menu-btn {
+  background: none;
+  color: var(--text-secondary);
+  font-size: 18px;
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.cc__menu-btn:hover {
+  background: var(--border-light);
+}
+
+.cc__menu-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  min-width: 180px;
+  padding: 4px;
+}
+
+.cc__menu-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  background: none;
+  color: var(--text-primary);
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.cc__menu-dropdown button:hover {
+  background: var(--bg-primary);
+}
+
+.cc__menu-danger {
+  color: var(--error) !important;
+}
+
+/* ─── Plan Summary Bar ──────────────────────────────────── */
+
+.cc__plan-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.cc__plan-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cc__plan-bar-info h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cc__plan-bar-dates {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.cc__plan-bar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── Toolbar (Filters + Bulk) ──────────────────────────── */
+
+.cc__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cc__filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cc__filter-icon {
+  color: var(--text-secondary);
+  font-size: 18px;
+}
+
+.cc__filters select {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.cc__bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* ─── Calendar Table ────────────────────────────────────── */
+
+.cc__table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.cc__table-card .table-wrapper {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.cc__table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  z-index: 5;
+}
+
+.cc__table td {
+  vertical-align: middle;
+}
+
+.cc__row--selected td {
+  background: #f5f3ff !important;
+}
+
+.cc__date-cell {
+  width: 64px;
+}
+
+.cc__date-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 44px;
+  padding: 6px 4px;
+  border-radius: var(--radius-sm);
+  background: var(--gradient-card);
+  border: 1px solid var(--border-light);
+}
+
+.cc__date-day {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary);
+}
+
+.cc__date-month {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.cc__entry-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  max-width: 200px;
+}
+
+.cc__entry-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  max-width: 300px;
+  line-height: 1.5;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.cc__type-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--gradient-card);
+  color: var(--primary-dark);
+}
+
+.cc__assets {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.cc__asset-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--border-light);
+  color: var(--text-secondary);
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.cc__asset-thumb:hover {
+  background: var(--primary-light);
+  color: #fff;
+}
+
+.cc__asset-more {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.cc__no-assets {
+  color: var(--border);
+}
+
+.cc__row-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.cc__row-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 15px;
+  transition: all 0.15s;
+}
+
+.cc__row-actions button:hover {
+  background: var(--border-light);
+  color: var(--primary);
+}
+
+/* ─── Modal / Overlay ───────────────────────────────────── */
+
+.cc__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: cc-fade-in 0.15s ease-out;
+}
+
+@keyframes cc-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cc__modal {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
+  animation: cc-slide-up 0.2s ease-out;
+}
+
+.cc__modal--sm {
+  max-width: 500px;
+}
+
+@keyframes cc-slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cc__modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.cc__modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+}
+
+.cc__modal-header button {
+  background: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.cc__modal-header button:hover {
+  background: var(--border-light);
+}
+
+.cc__modal-body {
+  padding: 24px;
+}
+
+/* ─── Form Styles ───────────────────────────────────────── */
+
+.cc__form-group {
+  margin-bottom: 16px;
+}
+
+.cc__form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+
+.cc__form-group input,
+.cc__form-group select,
+.cc__form-group textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  transition: border-color 0.15s;
+}
+
+.cc__form-group input:focus,
+.cc__form-group select:focus,
+.cc__form-group textarea:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+}
+
+.cc__form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.cc__chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ─── Products Grid (reuses .product-card from carousel.css) ── */
+
+.cc__product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.cc__modal .product-search {
+  margin-bottom: 12px;
+}
+
+.cc__modal .product-card {
+  padding: 12px;
+  gap: 10px;
+}
+
+.cc__modal .product-card__img {
+  width: 48px;
+  height: 48px;
+}
+
+.cc__modal .product-card__name {
+  font-size: 12px;
+}
+
+.cc__modal .product-card__price {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* ─── Toggle Checkbox ───────────────────────────────────── */
+
+.cc__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.cc__toggle input[type="checkbox"] {
+  accent-color: var(--primary);
+}
+
+/* ─── Generate Button ───────────────────────────────────── */
+
+.cc__generate-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 12px;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.cc__generate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── Progress Bar ─────────────────────────────────────── */
+
+.cc__progress {
+  margin-bottom: 16px;
+}
+
+.cc__progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.cc__progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cc__progress-fill {
+  height: 100%;
+  background: var(--gradient-brand);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* ─── Spinner ───────────────────────────────────────────── */
+
+.cc__spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: cc-spin 0.6s linear infinite;
+}
+
+@keyframes cc-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Responsive ────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .cc__header-row {
+    flex-direction: column;
+  }
+
+  .cc__plan-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .cc__plan-bar-info {
+    flex-wrap: wrap;
+  }
+
+  .cc__toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cc__modal {
+    max-width: 100%;
+    border-radius: var(--radius-md);
+  }
+
+  .cc__form-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -10,6 +10,7 @@ import ComingSoon from './pages/studio/ComingSoon';
 import Campaigns from './pages/Campaigns';
 import Content from './pages/Content';
 import Calendar from './pages/Calendar';
+import ContentCalendar from './pages/ContentCalendar';
 import Analytics from './pages/Analytics';
 import Audience from './pages/Audience';
 import Platforms from './pages/Platforms';
@@ -34,6 +35,7 @@ function App() {
         <Route path="/campaigns" element={<Campaigns />} />
         <Route path="/content" element={<Content />} />
         <Route path="/calendar" element={<Calendar />} />
+        <Route path="/content-calendar" element={<ContentCalendar />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/audience" element={<Audience />} />
         <Route path="/platforms" element={<Platforms />} />
