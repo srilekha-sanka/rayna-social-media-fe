@@ -106,17 +106,16 @@ export async function deleteEntry(entryId) {
   return request(`/content-studio/entries/${entryId}`, { method: 'DELETE' });
 }
 
-export async function bulkUpdateEntries(entryIds, status) {
-  return request('/content-studio/entries/bulk-update', {
+export async function composeEntry(entryId, payload = {}) {
+  return request(`/content-studio/entries/${entryId}/compose`, {
     method: 'POST',
-    body: JSON.stringify({ entry_ids: entryIds, status }),
+    body: JSON.stringify(payload),
   });
 }
 
-export async function linkEntryToPost(entryId, postId) {
-  return request(`/content-studio/entries/${entryId}/link-post`, {
+export async function generateEntryContent(entryId) {
+  return request(`/content-studio/entries/${entryId}/generate-content`, {
     method: 'POST',
-    body: JSON.stringify({ post_id: postId }),
   });
 }
 
@@ -125,6 +124,48 @@ export async function generateEntries(planId, payload) {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+// ─── Review Queue ────────────────────────────────────────
+
+export async function fetchReviewQueue({ page = 1, limit = 20, platform, content_plan_id } = {}) {
+  const params = new URLSearchParams({ page, limit });
+  if (platform) params.set('platform', platform);
+  if (content_plan_id) params.set('content_plan_id', content_plan_id);
+  return request(`/content-studio/review-queue?${params}`);
+}
+
+// ─── Entry Detail & Scheduling ───────────────────────────
+
+export async function fetchEntryDetail(entryId) {
+  return request(`/content-studio/entries/${entryId}/detail`);
+}
+
+export async function fetchSuggestedTimes({ date, platform } = {}) {
+  const params = new URLSearchParams();
+  if (date) params.set('date', date);
+  if (platform) params.set('platform', platform);
+  return request(`/content-studio/suggested-times?${params}`);
+}
+
+export async function bulkSchedule(items) {
+  return request('/content-studio/schedule/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ items }),
+  });
+}
+
+export async function autoSchedule(postIds) {
+  return request('/content-studio/schedule/auto', {
+    method: 'POST',
+    body: JSON.stringify({ post_ids: postIds }),
+  });
+}
+
+// ─── Posts ───────────────────────────────────────────────
+
+export async function fetchPostPreview(postId) {
+  return request(`/content-studio/posts/${postId}/preview`);
 }
 
 // ─── Async Jobs ──────────────────────────────────────────

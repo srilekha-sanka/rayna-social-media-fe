@@ -198,6 +198,14 @@ export async function createCampaign(payload) {
 //                           ↓
 //                        DRAFT (rejected)
 
+export async function updatePost(postId, payload) {
+  const res = await request(`/posts/${postId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+  return res.payload || res.data;
+}
+
 export async function submitPost(postId) {
   const res = await request(`/posts/${postId}/submit`, { method: 'POST' });
   return res.payload || res.data;

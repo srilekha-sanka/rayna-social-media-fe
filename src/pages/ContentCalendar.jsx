@@ -13,10 +13,16 @@ import {
   createEntry,
   updateEntry,
   deleteEntry,
-  bulkUpdateEntries,
+  composeEntry,
+  generateEntryContent,
   generateEntries,
+  fetchEntryDetail,
+  fetchSuggestedTimes,
+  bulkSchedule,
+  autoSchedule,
   pollJob,
 } from '../services/contentPlan';
+import { updatePost, submitPost, schedulePost, publishPost, getMediaUrl } from '../services/api';
 import {
   MdAdd,
   MdAutoAwesome,
@@ -28,7 +34,6 @@ import {
   MdCheckCircle,
   MdImage,
   MdPlayCircle,
-  MdFilterList,
   MdMoreVert,
   MdSearch,
   MdSend,
@@ -36,6 +41,19 @@ import {
   MdThumbDown,
   MdCalendarMonth,
   MdViewList,
+  MdBrush,
+  MdSmartToy,
+  MdSave,
+  MdRateReview,
+  MdVisibility,
+  MdSchedule,
+  MdRocketLaunch,
+  MdAccessTime,
+  MdStar,
+  MdDateRange,
+  MdBolt,
+  MdArrowForward,
+  MdInventory,
 } from 'react-icons/md';
 import '../styles/content-calendar.css';
 
@@ -68,6 +86,20 @@ const GOAL_OPTIONS = [
   { value: 'followers', label: 'Followers' },
 ];
 
+const POST_TYPE_OPTIONS = [
+  { value: 'reel', label: 'Reel' },
+  { value: 'image', label: 'Image' },
+  { value: 'carousel', label: 'Carousel' },
+  { value: 'cinematic_video', label: 'Cinematic Video' },
+  { value: 'story', label: 'Story' },
+  { value: 'text', label: 'Text' },
+];
+
+const LANGUAGE_OPTIONS = [
+  'english', 'arabic', 'hindi', 'french', 'spanish', 'german',
+  'portuguese', 'chinese', 'japanese', 'korean', 'russian', 'turkish',
+];
+
 // Map backend platform ID to PLATFORMS util for icon/color lookup
 function getPlanPlatformUI(id) {
   // 'x' in backend maps to 'twitter' in our PLATFORMS util
@@ -88,6 +120,8 @@ const STATUS_MAP = {
   SUGGESTED: { label: 'Suggested', cls: 'draft' },
   DRAFT: { label: 'Draft', cls: 'draft' },
   APPROVED: { label: 'Approved', cls: 'active' },
+  COMPOSING: { label: 'Composing', cls: 'paused' },
+  READY: { label: 'Ready', cls: 'completed' },
   REJECTED: { label: 'Rejected', cls: 'paused' },
   PUBLISHED: { label: 'Published', cls: 'completed' },
   PENDING_REVIEW: { label: 'In Review', cls: 'paused' },
@@ -118,6 +152,9 @@ export default function ContentCalendar() {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [showAIFillModal, setShowAIFillModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
+  const [composingEntry, setComposingEntry] = useState(null); // entry being composed into a post
+  const [scheduleEntry, setScheduleEntry] = useState(null); // entry opened in schedule panel
+  const [showBulkScheduleModal, setShowBulkScheduleModal] = useState(false);
 
   // Data
   const [plans, setPlans] = useState([]);
@@ -238,11 +275,21 @@ export default function ContentCalendar() {
     }
   }
 
+  async function handleEntryAction(entryId, status) {
+    try {
+      await updateEntry(entryId, { status });
+      showToast(`Entry ${status === 'APPROVED' ? 'approved' : 'skipped'}`);
+      if (activePlan) loadPlanEntries(activePlan);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function handleBulkAction(status) {
     if (!selectedEntries.length) return;
     try {
-      await bulkUpdateEntries(selectedEntries, status);
-      showToast(`${selectedEntries.length} entries updated`);
+      await Promise.all(selectedEntries.map((id) => updateEntry(id, { status })));
+      showToast(`${selectedEntries.length} entries ${status === 'APPROVED' ? 'approved' : 'skipped'}`);
       setSelectedEntries([]);
       if (activePlan) loadPlanEntries(activePlan);
     } catch (err) {
@@ -256,13 +303,8 @@ export default function ContentCalendar() {
     );
   }
 
-  function toggleSelectAll() {
-    const filtered = filteredEntries();
-    if (selectedEntries.length === filtered.length) {
-      setSelectedEntries([]);
-    } else {
-      setSelectedEntries(filtered.map((e) => e.id));
-    }
+  async function handleComposeEntry(entry) {
+    setComposingEntry(entry);
   }
 
   // ─── Filtering ──────────────────────────────────────────
@@ -361,16 +403,19 @@ export default function ContentCalendar() {
         <>
           {/* Plan Summary Bar */}
           <div className="cc__plan-bar">
-            <div className="cc__plan-bar-info">
-              <h3>{activePlan.name}</h3>
-              <span className="cc__plan-bar-dates">
-                {formatDate(activePlan.start_date)} — {formatDate(activePlan.end_date)}
-              </span>
-              {activePlan.status && (
-                <span className={`badge badge--${STATUS_MAP[activePlan.status]?.cls || 'draft'}`}>
-                  {STATUS_MAP[activePlan.status]?.label || activePlan.status}
-                </span>
-              )}
+            <div className="cc__plan-bar-left">
+              <h3 className="cc__plan-bar-title">{activePlan.name}</h3>
+              <div className="cc__plan-bar-meta">
+                <span className="cc__plan-bar-dates">{formatDate(activePlan.start_date)} — {formatDate(activePlan.end_date)}</span>
+                {activePlan.status && (
+                  <span className={`badge badge--${STATUS_MAP[activePlan.status]?.cls || 'draft'}`}>
+                    {STATUS_MAP[activePlan.status]?.label || activePlan.status}
+                  </span>
+                )}
+                {activePlan.language && (
+                  <span className="cc__pill">{activePlan.language.charAt(0).toUpperCase() + activePlan.language.slice(1)}</span>
+                )}
+              </div>
             </div>
             <div className="cc__plan-bar-actions">
               <button className="btn btn--outline btn--sm" onClick={() => { setEditingEntry(null); setShowEntryModal(true); }}>
@@ -382,10 +427,9 @@ export default function ContentCalendar() {
             </div>
           </div>
 
-          {/* Filters + Bulk Actions */}
+          {/* Toolbar: Filters + Bulk */}
           <div className="cc__toolbar">
             <div className="cc__filters">
-              <MdFilterList className="cc__filter-icon" />
               <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}>
                 <option value="">All Platforms</option>
                 {PLATFORMS.map((p) => (
@@ -399,22 +443,51 @@ export default function ContentCalendar() {
                 ))}
               </select>
             </div>
-            {selectedEntries.length > 0 && (
-              <div className="cc__bulk-actions">
-                <span>{selectedEntries.length} selected</span>
-                <button className="btn btn--sm btn--outline" onClick={() => handleBulkAction('APPROVED')}>
-                  <MdThumbUp /> Approve
-                </button>
-                <button className="btn btn--sm btn--outline" onClick={() => handleBulkAction('SKIPPED')}>
-                  Skip
-                </button>
-              </div>
-            )}
+            {selectedEntries.length > 0 && (() => {
+              const selectedReadyEntries = entries.filter(
+                (e) => selectedEntries.includes(e.id) && e.status === 'READY'
+              );
+              return (
+                <div className="cc__bulk-bar">
+                  <span className="cc__bulk-count">{selectedEntries.length} selected</span>
+                  <button className="btn btn--sm cc__bulk-approve" onClick={() => handleBulkAction('APPROVED')}>
+                    <MdThumbUp /> Approve
+                  </button>
+                  <button className="btn btn--sm cc__bulk-skip" onClick={() => handleBulkAction('SKIPPED')}>
+                    Skip
+                  </button>
+                  {selectedReadyEntries.length > 0 && (
+                    <>
+                      <button className="btn btn--sm cc__bulk-schedule" onClick={() => setShowBulkScheduleModal(true)}>
+                        <MdDateRange /> Bulk Schedule
+                      </button>
+                      <button className="btn btn--sm cc__bulk-auto" onClick={async () => {
+                        const postIds = selectedReadyEntries
+                          .map((e) => e.post?.id || e.post_id)
+                          .filter(Boolean);
+                        if (postIds.length === 0) { setError('No posts linked to selected entries'); return; }
+                        try {
+                          await autoSchedule(postIds);
+                          showToast(`${postIds.length} posts auto-scheduled!`);
+                          setSelectedEntries([]);
+                          if (activePlan) loadPlanEntries(activePlan);
+                        } catch (err) { setError(err.message); }
+                      }}>
+                        <MdBolt /> Auto-Schedule
+                      </button>
+                    </>
+                  )}
+                  <button className="cc__bulk-clear" onClick={() => setSelectedEntries([])}>
+                    <MdClose />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
-          {/* Calendar Table */}
+          {/* Entries Table */}
           {loading ? (
-            <div className="cc__loader">Loading calendar...</div>
+            <div className="cc__loader">Loading entries...</div>
           ) : entries.length === 0 ? (
             <div className="card">
               <div className="empty-state">
@@ -424,109 +497,135 @@ export default function ContentCalendar() {
               </div>
             </div>
           ) : (
-            <div className="card cc__table-card">
-              <div className="table-wrapper">
-                <table className="table cc__table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 40 }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedEntries.length === entries.length && entries.length > 0}
-                          onChange={toggleSelectAll}
-                        />
-                      </th>
-                      <th>Date</th>
-                      <th>Title / Theme</th>
-                      <th>Description</th>
-                      <th>Type</th>
-                      <th>Platform</th>
-                      <th>Assets</th>
-                      <th>Status</th>
-                      <th style={{ width: 80 }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedDates.map((date) =>
-                      groupedByDate[date].map((entry, idx) => {
-                        const platform = getPlatformMeta(entry.platform);
-                        const PlatformIcon = platform.icon || null;
-                        const st = STATUS_MAP[entry.status] || STATUS_MAP.DRAFT;
-                        const assets = entry.media_urls || entry.assets || [];
+            <div className="cc__table-wrap">
+              <table className="cc__table">
+                <thead>
+                  <tr>
+                    <th className="cc__th-check">
+                      <input
+                        type="checkbox"
+                        checked={selectedEntries.length === entries.length && entries.length > 0}
+                        onChange={() => {
+                          if (selectedEntries.length === entries.length) setSelectedEntries([]);
+                          else setSelectedEntries(entries.map((e) => e.id));
+                        }}
+                      />
+                    </th>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Format</th>
+                    <th>Platform</th>
+                    <th>Assets</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedDates.map((date) =>
+                    groupedByDate[date].map((entry, idx) => {
+                      const platform = getPlatformMeta(entry.platform);
+                      const PlatformIcon = platform.icon || null;
+                      const st = STATUS_MAP[entry.status] || STATUS_MAP.DRAFT;
+                      const isSelected = selectedEntries.includes(entry.id);
 
-                        return (
-                          <tr key={entry.id} className={selectedEntries.includes(entry.id) ? 'cc__row--selected' : ''}>
-                            <td>
-                              <input
-                                type="checkbox"
-                                checked={selectedEntries.includes(entry.id)}
-                                onChange={() => toggleEntrySelect(entry.id)}
-                              />
-                            </td>
-                            <td className="cc__date-cell">
-                              {idx === 0 && (
-                                <div className="cc__date-badge">
-                                  <span className="cc__date-day">{new Date(date + 'T00:00:00').getDate()}</span>
-                                  <span className="cc__date-month">
-                                    {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
-                                  </span>
-                                </div>
-                              )}
-                            </td>
-                            <td>
-                              <div className="cc__entry-title">{entry.title}</div>
-                            </td>
-                            <td>
-                              <div className="cc__entry-desc">{entry.description}</div>
-                            </td>
-                            <td>
-                              <span className="cc__type-tag">
-                                {CONTENT_TYPE_LABELS[entry.content_type] || entry.content_type || '—'}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="platform-pill" style={{ borderColor: platform.color, color: platform.color }}>
-                                {PlatformIcon && <PlatformIcon className="platform-pill__icon" />}
-                                {platform.name}
+                      return (
+                        <tr key={entry.id} className={isSelected ? 'cc__tr--selected' : ''}>
+                          <td className="cc__td-check">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleEntrySelect(entry.id)}
+                            />
+                          </td>
+                          <td className="cc__td-date">
+                            {idx === 0 ? (
+                              <div className="cc__date-badge">
+                                <span className="cc__date-day">{new Date(date + 'T00:00:00').getDate()}</span>
+                                <span className="cc__date-wk">{new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</span>
                               </div>
-                            </td>
-                            <td>
-                              {assets.length > 0 ? (
+                            ) : null}
+                          </td>
+                          <td className="cc__td-title">{entry.title}</td>
+                          <td className="cc__td-desc">{entry.description}</td>
+                          <td><span className="cc__tag">{CONTENT_TYPE_LABELS[entry.content_type] || entry.content_type || '—'}</span></td>
+                          <td>
+                            {entry.post_type ? (
+                              <span className="cc__tag">{(POST_TYPE_OPTIONS.find((o) => o.value === entry.post_type) || {}).label || entry.post_type.replace('_', ' ')}</span>
+                            ) : '—'}
+                          </td>
+                          <td>
+                            <span className="cc__platform-chip" style={{ '--p-color': platform.color }}>
+                              {PlatformIcon && <PlatformIcon />}
+                              {platform.name}
+                            </span>
+                          </td>
+                          <td>
+                            {(() => {
+                              const assets = entry.media_urls || entry.assets || [];
+                              return assets.length > 0 ? (
                                 <div className="cc__assets">
-                                  {assets.slice(0, 3).map((url, i) => (
-                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="cc__asset-thumb">
-                                      {url.match(/\.(mp4|mov|webm)/i) ? <MdPlayCircle /> : <MdImage />}
-                                    </a>
-                                  ))}
+                                  {assets.slice(0, 3).map((url, i) => {
+                                    const isVideo = url.match(/\.(mp4|mov|webm)/i);
+                                    return (
+                                      <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="cc__asset-thumb">
+                                        {isVideo ? (
+                                          <MdPlayCircle />
+                                        ) : (
+                                          <img src={url} alt="" className="cc__asset-img" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                                        )}
+                                        <span className="cc__asset-fallback" style={{ display: 'none' }}><MdImage /></span>
+                                      </a>
+                                    );
+                                  })}
                                   {assets.length > 3 && <span className="cc__asset-more">+{assets.length - 3}</span>}
                                 </div>
                               ) : (
                                 <span className="cc__no-assets">—</span>
-                              )}
-                            </td>
-                            <td>
-                              <span className={`badge badge--${st.cls}`}>{st.label}</span>
-                            </td>
-                            <td>
-                              <div className="cc__row-actions">
-                                <button
-                                  title="Edit"
-                                  onClick={() => { setEditingEntry(entry); setShowEntryModal(true); }}
-                                >
-                                  <MdEdit />
-                                </button>
-                                <button title="Delete" onClick={() => handleDeleteEntry(entry.id)}>
-                                  <MdDelete />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                              );
+                            })()}
+                          </td>
+                          <td><span className={`badge badge--${st.cls}`}>{st.label}</span></td>
+                          <td className="cc__td-actions">
+                            {entry.status === 'SUGGESTED' && (
+                              <>
+                                <button className="cc__act cc__act--approve" onClick={() => handleEntryAction(entry.id, 'APPROVED')} title="Approve"><MdThumbUp /></button>
+                                <button className="cc__act cc__act--skip" onClick={() => handleEntryAction(entry.id, 'SKIPPED')} title="Skip"><MdThumbDown /></button>
+                                <button className="cc__act" onClick={() => { setEditingEntry(entry); setShowEntryModal(true); }} title="Edit"><MdEdit /></button>
+                                <button className="cc__act cc__act--danger" onClick={() => handleDeleteEntry(entry.id)} title="Delete"><MdDelete /></button>
+                              </>
+                            )}
+                            {entry.status === 'APPROVED' && (
+                              <>
+                                <button className="cc__compose-btn" onClick={() => handleComposeEntry(entry)}><MdBrush /> Compose</button>
+                                <button className="cc__act" onClick={() => { setEditingEntry(entry); setShowEntryModal(true); }} title="Edit"><MdEdit /></button>
+                              </>
+                            )}
+                            {entry.status === 'COMPOSING' && (
+                              <button className="cc__compose-btn cc__compose-btn--outline" onClick={() => handleComposeEntry(entry)}><MdEdit /> Edit Draft</button>
+                            )}
+                            {entry.status === 'READY' && (
+                              <button className="cc__compose-btn" onClick={() => setScheduleEntry(entry)}>
+                                <MdSchedule /> Schedule
+                              </button>
+                            )}
+                            {['SCHEDULED', 'PUBLISHED'].includes(entry.status) && (
+                              <span className="cc__finalized"><MdCheckCircle /> {st.label}</span>
+                            )}
+                            {entry.status === 'SKIPPED' && (
+                              <>
+                                <button className="cc__act" onClick={() => handleEntryAction(entry.id, 'SUGGESTED')} title="Restore"><MdEdit /></button>
+                                <button className="cc__act cc__act--danger" onClick={() => handleDeleteEntry(entry.id)} title="Delete"><MdDelete /></button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </>
@@ -581,6 +680,46 @@ export default function ContentCalendar() {
           }}
         />
       )}
+
+      {/* ─── Post Composer Modal ────────────────────────────── */}
+      {composingEntry && (
+        <PostComposer
+          entry={composingEntry}
+          onClose={() => setComposingEntry(null)}
+          onDone={(msg) => {
+            setComposingEntry(null);
+            showToast(msg || 'Post updated');
+            if (activePlan) loadPlanEntries(activePlan);
+          }}
+        />
+      )}
+
+      {/* ─── Schedule Panel (Slide-in) ─────────────────────── */}
+      {scheduleEntry && (
+        <SchedulePanel
+          entry={scheduleEntry}
+          onClose={() => setScheduleEntry(null)}
+          onScheduled={(msg) => {
+            setScheduleEntry(null);
+            showToast(msg || 'Post scheduled!');
+            if (activePlan) loadPlanEntries(activePlan);
+          }}
+        />
+      )}
+
+      {/* ─── Bulk Schedule Modal ───────────────────────────── */}
+      {showBulkScheduleModal && (
+        <BulkScheduleModal
+          entries={entries.filter((e) => selectedEntries.includes(e.id) && e.status === 'READY')}
+          onClose={() => setShowBulkScheduleModal(false)}
+          onScheduled={(msg) => {
+            setShowBulkScheduleModal(false);
+            setSelectedEntries([]);
+            showToast(msg || 'Posts scheduled!');
+            if (activePlan) loadPlanEntries(activePlan);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -622,6 +761,21 @@ function PlanCard({ plan, onOpen, onDelete, onAction, activeMenu, setActiveMenu 
       <p className="cc__plan-card-dates">
         {formatDate(plan.start_date)} — {formatDate(plan.end_date)}
       </p>
+      {plan.language && (
+        <p className="cc__plan-card-meta" style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+          Language: {plan.language.charAt(0).toUpperCase() + plan.language.slice(1)}
+        </p>
+      )}
+      {plan.post_types && plan.post_types.length > 0 && (
+        <p className="cc__plan-card-meta" style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+          {plan.post_types.length >= 6
+            ? 'All Formats'
+            : plan.post_types.map((t) => {
+                const opt = POST_TYPE_OPTIONS.find((o) => o.value === t);
+                return opt ? opt.label : t.replace('_', ' ');
+              }).join(', ')}
+        </p>
+      )}
       <div className="cc__plan-card-footer">
         <div className="cc__plan-card-platforms">
           {platforms.map((pid) => {
@@ -653,6 +807,8 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
     target_audience: 'tourists and residents in UAE aged 20-45',
     region: 'UAE',
     special_notes: '',
+    language: 'english',
+    post_types: [],
   });
   const [productSearch, setProductSearch] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -695,6 +851,13 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
     }));
   }
 
+  function togglePostType(value) {
+    setForm((f) => ({
+      ...f,
+      post_types: f.post_types.includes(value) ? f.post_types.filter((t) => t !== value) : [...f.post_types, value],
+    }));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name || !form.start_date || !form.end_date || form.platforms.length === 0) {
@@ -705,7 +868,9 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
     setGenerating(true);
     setProgress(null);
     try {
-      const res = await generatePlan(form);
+      const payload = { ...form };
+      if (payload.post_types.length === 0) delete payload.post_types;
+      const res = await generatePlan(payload);
       // Async job pattern: backend returns { job_id, status: "PROCESSING" }
       if (res.job_id) {
         const completed = await pollJob(res.job_id, {
@@ -861,6 +1026,36 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
 
           <div className="cc__form-row">
             <div className="cc__form-group">
+              <label>Language</label>
+              <select value={form.language} onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}>
+                {LANGUAGE_OPTIONS.map((lang) => (
+                  <option key={lang} value={lang}>{lang.charAt(0).toUpperCase() + lang.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="cc__form-group">
+            <label>Post Types <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(leave empty for all types)</span></label>
+            <div className="cc__chip-grid">
+              {POST_TYPE_OPTIONS.map((pt) => {
+                const selected = form.post_types.includes(pt.value);
+                return (
+                  <button
+                    key={pt.value}
+                    type="button"
+                    className={`platform-chip${selected ? ' platform-chip--selected' : ''}`}
+                    onClick={() => togglePostType(pt.value)}
+                  >
+                    {pt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="cc__form-row">
+            <div className="cc__form-group">
               <label>Target Audience</label>
               <input
                 type="text"
@@ -946,6 +1141,8 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
     tone: 'adventurous',
     primary_goal: 'bookings',
     skip_existing_dates: true,
+    language: plan.language || 'english',
+    post_types: plan.post_types || [],
   });
   const [productSearch, setProductSearch] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -989,6 +1186,13 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
     }));
   }
 
+  function togglePostType(value) {
+    setForm((f) => ({
+      ...f,
+      post_types: f.post_types.includes(value) ? f.post_types.filter((t) => t !== value) : [...f.post_types, value],
+    }));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (form.platforms.length === 0) {
@@ -999,7 +1203,9 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
     setFilling(true);
     setProgress(null);
     try {
-      const res = await generateEntries(plan.id, form);
+      const payload = { ...form };
+      if (payload.post_types.length === 0) delete payload.post_types;
+      const res = await generateEntries(plan.id, payload);
       // Async job pattern
       if (res.job_id) {
         const completed = await pollJob(res.job_id, {
@@ -1128,6 +1334,36 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
                 value={form.posts_per_day}
                 onChange={(e) => setForm((f) => ({ ...f, posts_per_day: Number(e.target.value) }))}
               />
+            </div>
+          </div>
+
+          <div className="cc__form-row">
+            <div className="cc__form-group">
+              <label>Language</label>
+              <select value={form.language} onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}>
+                {LANGUAGE_OPTIONS.map((lang) => (
+                  <option key={lang} value={lang}>{lang.charAt(0).toUpperCase() + lang.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="cc__form-group">
+            <label>Post Types <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(leave empty for all types)</span></label>
+            <div className="cc__chip-grid">
+              {POST_TYPE_OPTIONS.map((pt) => {
+                const selected = form.post_types.includes(pt.value);
+                return (
+                  <button
+                    key={pt.value}
+                    type="button"
+                    className={`platform-chip${selected ? ' platform-chip--selected' : ''}`}
+                    onClick={() => togglePostType(pt.value)}
+                  >
+                    {pt.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1272,6 +1508,792 @@ function EntryModal({ entry, planId, startDate, endDate, onClose, onSaved }) {
             {saving ? 'Saving...' : entry ? 'Update Entry' : 'Create Entry'}
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Post Composer Modal ──────────────────────────────────────
+
+function PostComposer({ entry, onClose, onDone }) {
+  const [postId, setPostId] = useState(null);
+  const [caption, setCaption] = useState('');
+  const [hashtags, setHashtags] = useState('');
+  const [cta, setCta] = useState('');
+  const [mediaUrls, setMediaUrls] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [error, setError] = useState('');
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [lightboxUrls, setLightboxUrls] = useState([]);
+
+  // On mount: call compose or reuse existing post
+  useEffect(() => {
+    let cancelled = false;
+
+    async function init() {
+      // If entry already has a linked post, reuse it
+      if (entry.status === 'COMPOSING' && entry.post) {
+        const p = entry.post;
+        setPostId(p.id);
+        setCaption(p.base_content || '');
+        setHashtags((p.hashtags || []).join(', '));
+        setCta(p.cta_text || '');
+        setMediaUrls(p.media_urls || []);
+        return;
+      }
+
+      // Call compose — returns 201 with full post (images already processed)
+      setLoading(true);
+      setError('');
+      try {
+        const res = await composeEntry(entry.id);
+        if (cancelled) return;
+
+        // contentPlan.js request() unwraps data.data, so res = { post, entry }
+        const post = res.post || res.data?.post || res;
+
+        console.log('[PostComposer] compose response:', post);
+
+        if (!post?.id) {
+          setError('Compose did not return a valid post.');
+          return;
+        }
+
+        setPostId(post.id);
+        setCaption(post.base_content || '');
+        setHashtags((post.hashtags || []).join(', '));
+        setCta(post.cta_text || '');
+        setMediaUrls(post.media_urls || []);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    init();
+    return () => { cancelled = true; };
+  }, [entry]);
+
+  async function handleGenerateAI() {
+    setGenerating(true);
+    setError('');
+    try {
+      const raw = await generateEntryContent(entry.id);
+      const res = raw.data || raw;
+      if (res.caption) setCaption(res.caption);
+      if (res.hashtags) setHashtags(res.hashtags.join(', '));
+      if (res.cta_text) setCta(res.cta_text);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!postId) { setError('No post created yet'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      await updatePost(postId, {
+        base_content: caption,
+        hashtags: hashtags.split(',').map((h) => h.trim()).filter(Boolean),
+        cta_text: cta,
+        media_urls: mediaUrls,
+      });
+      onDone('Draft saved');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSubmitForReview() {
+    if (!postId) { setError('No post created yet'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      // Save first, then submit
+      await updatePost(postId, {
+        base_content: caption,
+        hashtags: hashtags.split(',').map((h) => h.trim()).filter(Boolean),
+        cta_text: cta,
+        media_urls: mediaUrls,
+      });
+      await submitPost(postId);
+      onDone('Post submitted for review');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const platform = getPlatformMeta(entry.platform);
+  const PlatformIcon = platform.icon || null;
+  const hashtagList = hashtags.split(',').map((h) => h.trim()).filter(Boolean);
+
+  return (
+    <div className="cc__overlay" onClick={onClose}>
+      <div className="cc__modal cc__modal--lg" onClick={(e) => e.stopPropagation()}>
+        <div className="cc__modal-header">
+          <h3><MdBrush /> Post Composer</h3>
+          <button onClick={onClose}><MdClose /></button>
+        </div>
+
+        <div className="cc__modal-body">
+          {error && (
+            <div className="cc__alert cc__alert--error" style={{ marginBottom: 16 }}>
+              {error}
+              <button onClick={() => setError('')}><MdClose /></button>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="pc__loading">
+              <span className="cc__spinner cc__spinner--lg" />
+              <p className="pc__loading-text">Processing images & generating content...</p>
+            </div>
+          ) : showPreview ? (
+            /* ─── Preview (pure FE — no API call) ─────── */
+            <div className="pc__preview">
+              <div className="pc__preview-header">
+                <h4><MdVisibility /> Post Preview</h4>
+                <button className="btn btn--outline btn--sm" onClick={() => setShowPreview(false)}>
+                  <MdEdit /> Back to Editor
+                </button>
+              </div>
+
+              {mediaUrls.length > 0 && (
+                <div className="pc__preview-media">
+                  {mediaUrls.map((url, i) => (
+                    <img key={i} src={url} alt={`Slide ${i + 1}`} className="pc__preview-slide" onClick={() => { setLightboxUrls(mediaUrls); setLightboxIndex(i); }} style={{ cursor: 'pointer' }} />
+                  ))}
+                </div>
+              )}
+
+              <div className="pc__preview-body">
+                <div className="pc__preview-platform">
+                  {PlatformIcon && <PlatformIcon style={{ color: platform.color }} />}
+                  <span>{platform.name}</span>
+                  {entry.date && <span className="pc__date">{formatDate(entry.date)}</span>}
+                </div>
+                {caption && <p className="pc__preview-caption">{caption}</p>}
+                {hashtagList.length > 0 && (
+                  <p className="pc__preview-hashtags">
+                    {hashtagList.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')}
+                  </p>
+                )}
+                {cta && <div className="pc__preview-cta">{cta}</div>}
+              </div>
+
+              <div className="pc__actions">
+                <button className="btn btn--outline" onClick={() => setShowPreview(false)}>
+                  <MdEdit /> Edit
+                </button>
+                <button className="btn btn--primary" onClick={handleSubmitForReview} disabled={saving || !caption.trim()}>
+                  <MdRateReview /> Submit for Review
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ─── Editor ────────────────────────────────── */
+            <>
+              {/* Entry context bar */}
+              <div className="pc__context-bar">
+                <div className="pc__context-info">
+                  <h4>{entry.title}</h4>
+                  <div className="pc__context-meta">
+                    <span className="cc__type-tag">{CONTENT_TYPE_LABELS[entry.content_type] || entry.content_type}</span>
+                    <div className="platform-pill" style={{ borderColor: platform.color, color: platform.color }}>
+                      {PlatformIcon && <PlatformIcon className="platform-pill__icon" />}
+                      {platform.name}
+                    </div>
+                    {entry.post_type && (
+                      <span className="cc__type-tag">
+                        {(POST_TYPE_OPTIONS.find((o) => o.value === entry.post_type) || {}).label || entry.post_type}
+                      </span>
+                    )}
+                    {entry.date && <span className="pc__date">{formatDate(entry.date)}</span>}
+                  </div>
+                </div>
+                <button
+                  className="btn btn--outline btn--sm"
+                  onClick={handleGenerateAI}
+                  disabled={generating}
+                >
+                  {generating ? (
+                    <><span className="cc__spinner" /> Generating...</>
+                  ) : (
+                    <><MdSmartToy /> Generate with AI</>
+                  )}
+                </button>
+              </div>
+
+              {entry.description && (
+                <p className="pc__entry-desc">{entry.description}</p>
+              )}
+
+              {/* Processed images from compose */}
+              {mediaUrls.length > 0 && (
+                <div className="pc__media-gallery">
+                  <label className="pc__media-label">Processed Media</label>
+                  <div className="pc__slides-grid">
+                    {mediaUrls.map((url, i) => (
+                      <div className="pc__slide-card" key={i}>
+                        <div className="pc__slide-card-img-wrap">
+                          <img src={url} alt={`Slide ${i + 1}`} className="pc__slide-card-img" onClick={() => { setLightboxUrls(mediaUrls); setLightboxIndex(i); }} style={{ cursor: 'pointer' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Caption */}
+              <div className="cc__form-group">
+                <label>Caption / Content</label>
+                <textarea
+                  rows="5"
+                  placeholder="Write your post caption..."
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                />
+              </div>
+
+              {/* Hashtags */}
+              <div className="cc__form-group">
+                <label>Hashtags <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(comma-separated)</span></label>
+                <input
+                  type="text"
+                  placeholder="#RaynaTours, #Dubai, #DesertSafari"
+                  value={hashtags}
+                  onChange={(e) => setHashtags(e.target.value)}
+                />
+              </div>
+
+              {/* CTA */}
+              <div className="cc__form-group">
+                <label>Call to Action</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Link in bio to book!"
+                  value={cta}
+                  onChange={(e) => setCta(e.target.value)}
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="pc__actions">
+                <button className="btn btn--outline" onClick={handleSave} disabled={saving}>
+                  <MdSave /> Save Draft
+                </button>
+                <button className="btn btn--outline" onClick={() => setShowPreview(true)} disabled={!postId}>
+                  <MdVisibility /> Preview
+                </button>
+                <button className="btn btn--primary" onClick={handleSubmitForReview} disabled={saving || !caption.trim()}>
+                  <MdRateReview /> Submit for Review
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ─── Lightbox overlay ─────────────────────────────── */}
+      {lightboxIndex !== null && lightboxUrls.length > 0 && (
+        <div className="lightbox-overlay" onClick={() => setLightboxIndex(null)}>
+          <button className="lightbox-close" onClick={() => setLightboxIndex(null)}>
+            <MdClose />
+          </button>
+
+          {lightboxUrls.length > 1 && lightboxIndex > 0 && (
+            <button className="lightbox-nav lightbox-nav--prev" onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }}>
+              <MdChevronLeft />
+            </button>
+          )}
+
+          <img src={lightboxUrls[lightboxIndex]} alt="Full preview" className="lightbox-img" onClick={(e) => e.stopPropagation()} />
+
+          {lightboxUrls.length > 1 && lightboxIndex < lightboxUrls.length - 1 && (
+            <button className="lightbox-nav lightbox-nav--next" onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }}>
+              <MdChevronRight />
+            </button>
+          )}
+
+          {lightboxUrls.length > 1 && (
+            <div className="lightbox-counter">{lightboxIndex + 1} / {lightboxUrls.length}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Schedule Panel (Slide-in) ──────────────────────────────
+
+function SchedulePanel({ entry, onClose, onScheduled }) {
+  const [detail, setDetail] = useState(null);
+  const [suggestedTimes, setSuggestedTimes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [scheduling, setScheduling] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [autoScheduling, setAutoScheduling] = useState(false);
+  const [customTime, setCustomTime] = useState('');
+  const [showCustom, setShowCustom] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const [detailRes, timesRes] = await Promise.all([
+          fetchEntryDetail(entry.id),
+          fetchSuggestedTimes({
+            date: entry.date || entry.scheduled_date,
+            platform: entry.platform,
+          }),
+        ]);
+        if (cancelled) return;
+        setDetail(detailRes);
+        const times = timesRes.times || timesRes.suggested_times || timesRes;
+        setSuggestedTimes(Array.isArray(times) ? times : []);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [entry.id]);
+
+  const post = detail?.post || entry.post || {};
+  const postId = post.id || post._id || entry.post_id;
+  const product = detail?.product || post.product;
+  const media = post.media_urls || entry.media_urls || [];
+  const caption = post.base_content || post.caption || entry.description || '';
+  const hashtags = post.hashtags || [];
+  const cta = post.cta_text || post.cta || '';
+  const platform = getPlatformMeta(entry.platform);
+  const PlatformIcon = platform.icon || null;
+
+  async function handleScheduleAt(scheduledAt) {
+    if (!postId) { setError('No post linked to this entry'); return; }
+    setScheduling(true);
+    setError('');
+    try {
+      await schedulePost(postId, scheduledAt);
+      onScheduled(`Scheduled for ${new Date(scheduledAt).toLocaleString()}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  async function handlePublishNow() {
+    if (!postId) { setError('No post linked to this entry'); return; }
+    setPublishing(true);
+    setError('');
+    try {
+      await publishPost(postId);
+      onScheduled('Published successfully!');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function handleAutoSchedule() {
+    if (!postId) { setError('No post linked to this entry'); return; }
+    setAutoScheduling(true);
+    setError('');
+    try {
+      await autoSchedule([postId]);
+      onScheduled('Auto-scheduled with optimal time!');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAutoScheduling(false);
+    }
+  }
+
+  function handleCustomSchedule() {
+    if (!customTime) return;
+    const entryDate = entry.date || entry.scheduled_date;
+    const scheduledAt = entryDate ? `${entryDate}T${customTime}:00` : customTime;
+    handleScheduleAt(scheduledAt);
+  }
+
+  function buildScheduledAt(time) {
+    const entryDate = entry.date || entry.scheduled_date || new Date().toISOString().split('T')[0];
+    return `${entryDate}T${time}:00`;
+  }
+
+  const isActioning = scheduling || publishing || autoScheduling;
+
+  return (
+    <div className="sp__backdrop" onClick={onClose}>
+      <div className="sp__panel" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="sp__header">
+          <div className="sp__header-left">
+            <MdSchedule className="sp__header-icon" />
+            <h3>Schedule Post</h3>
+          </div>
+          <button className="sp__close" onClick={onClose}><MdClose /></button>
+        </div>
+
+        <div className="sp__body">
+          {error && (
+            <div className="cc__alert cc__alert--error" style={{ marginBottom: 16 }}>
+              {error}
+              <button onClick={() => setError('')}><MdClose /></button>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="sp__loading">
+              <span className="cc__spinner cc__spinner--lg" />
+              <p className="pc__loading-text">Loading post details...</p>
+            </div>
+          ) : (
+            <>
+              {/* ── Post Preview Section ── */}
+              <div className="sp__preview-card">
+                {media.length > 0 && (
+                  <div className="sp__media-row">
+                    {media.slice(0, 4).map((url, i) => (
+                      <div key={i} className="sp__media-item" onClick={() => setLightboxIndex(i)}>
+                        <img src={getMediaUrl(url)} alt="" className="sp__media-img" />
+                        {i === 3 && media.length > 4 && (
+                          <div className="sp__media-more">+{media.length - 4}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="sp__preview-meta">
+                  <span className="cc__platform-chip" style={{ '--p-color': platform.color }}>
+                    {PlatformIcon && <PlatformIcon />} {platform.name}
+                  </span>
+                  {entry.content_type && (
+                    <span className="cc__tag">{CONTENT_TYPE_LABELS[entry.content_type] || entry.content_type}</span>
+                  )}
+                  {entry.date && (
+                    <span className="sp__date-pill">
+                      <MdCalendarMonth /> {formatDate(entry.date)}
+                    </span>
+                  )}
+                </div>
+
+                <h4 className="sp__preview-title">{entry.title}</h4>
+
+                {caption && (
+                  <p className="sp__preview-caption">{caption}</p>
+                )}
+
+                {hashtags.length > 0 && (
+                  <p className="sp__preview-hashtags">
+                    {hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')}
+                  </p>
+                )}
+
+                {cta && (
+                  <div className="sp__preview-cta">{cta}</div>
+                )}
+
+                {product && (
+                  <div className="sp__product-row">
+                    {(product.image || product.images?.[0]) && (
+                      <img src={getMediaUrl(product.image || product.images[0])} alt="" className="sp__product-img" />
+                    )}
+                    <div>
+                      <strong>{product.name || product.title}</strong>
+                      {product.price && (
+                        <span className="sp__product-price">{product.currency || 'AED'} {product.sale_price || product.price}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Suggested Times ── */}
+              <div className="sp__section">
+                <div className="sp__section-header">
+                  <MdAccessTime className="sp__section-icon" />
+                  <h4>Best Times to Post</h4>
+                </div>
+
+                {suggestedTimes.length > 0 ? (
+                  <div className="sp__times-list">
+                    {suggestedTimes.map((slot, i) => {
+                      const time = slot.time || slot.suggested_time;
+                      const label = slot.label || slot.reason || slot.description || '';
+                      const score = slot.score || slot.engagement_score;
+                      return (
+                        <button
+                          key={i}
+                          className="sp__time-slot"
+                          onClick={() => handleScheduleAt(buildScheduledAt(time))}
+                          disabled={isActioning}
+                        >
+                          <div className="sp__time-slot-left">
+                            {i === 0 && <MdStar className="sp__time-star" />}
+                            <div>
+                              <span className="sp__time-value">{time}</span>
+                              {label && <span className="sp__time-label">{label}</span>}
+                            </div>
+                          </div>
+                          <div className="sp__time-slot-right">
+                            {score && (
+                              <div className="sp__score-badge" data-score={score >= 90 ? 'high' : score >= 80 ? 'mid' : 'low'}>
+                                {score}
+                              </div>
+                            )}
+                            <MdArrowForward className="sp__time-arrow" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="sp__empty-times">No suggested times available. Use auto-schedule or pick a custom time.</p>
+                )}
+
+                {/* Custom Time */}
+                <button
+                  className="sp__custom-toggle"
+                  onClick={() => setShowCustom((v) => !v)}
+                >
+                  <MdDateRange /> {showCustom ? 'Hide' : 'Pick'} custom time
+                </button>
+
+                {showCustom && (
+                  <div className="sp__custom-row">
+                    <input
+                      type="time"
+                      value={customTime}
+                      onChange={(e) => setCustomTime(e.target.value)}
+                      className="sp__custom-input"
+                    />
+                    <button
+                      className="btn btn--primary btn--sm"
+                      onClick={handleCustomSchedule}
+                      disabled={!customTime || isActioning}
+                    >
+                      Schedule
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Action Buttons ── */}
+              <div className="sp__actions">
+                <button
+                  className="sp__action-btn sp__action-btn--publish"
+                  onClick={handlePublishNow}
+                  disabled={isActioning}
+                >
+                  {publishing ? <span className="cc__spinner" /> : <MdRocketLaunch />}
+                  Publish Now
+                </button>
+                <button
+                  className="sp__action-btn sp__action-btn--auto"
+                  onClick={handleAutoSchedule}
+                  disabled={isActioning}
+                >
+                  {autoScheduling ? <span className="cc__spinner" /> : <MdBolt />}
+                  Auto-Schedule
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Lightbox */}
+        {lightboxIndex !== null && media.length > 0 && (
+          <div className="lightbox-overlay" onClick={() => setLightboxIndex(null)}>
+            <button className="lightbox-close" onClick={() => setLightboxIndex(null)}><MdClose /></button>
+            {media.length > 1 && lightboxIndex > 0 && (
+              <button className="lightbox-nav lightbox-nav--prev" onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }}>‹</button>
+            )}
+            <img src={getMediaUrl(media[lightboxIndex])} alt="" className="lightbox-img" onClick={(e) => e.stopPropagation()} />
+            {media.length > 1 && lightboxIndex < media.length - 1 && (
+              <button className="lightbox-nav lightbox-nav--next" onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }}>›</button>
+            )}
+            {media.length > 1 && (
+              <div className="lightbox-counter">{lightboxIndex + 1} / {media.length}</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Bulk Schedule Modal ────────────────────────────────────
+
+function BulkScheduleModal({ entries, onClose, onScheduled }) {
+  const [mode, setMode] = useState('auto'); // 'auto' | 'manual'
+  const [manualTimes, setManualTimes] = useState(() =>
+    Object.fromEntries(entries.map((e) => [e.id, '']))
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleAutoSchedule() {
+    const postIds = entries
+      .map((e) => e.post?.id || e.post_id)
+      .filter(Boolean);
+    if (postIds.length === 0) { setError('No posts linked to selected entries'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      await autoSchedule(postIds);
+      onScheduled(`${postIds.length} posts auto-scheduled!`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleBulkManual() {
+    const items = entries
+      .map((e) => {
+        const postId = e.post?.id || e.post_id;
+        const time = manualTimes[e.id];
+        if (!postId || !time) return null;
+        const entryDate = e.date || e.scheduled_date || new Date().toISOString().split('T')[0];
+        return { post_id: postId, scheduled_at: `${entryDate}T${time}:00` };
+      })
+      .filter(Boolean);
+    if (items.length === 0) { setError('Please set times for at least one entry'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      await bulkSchedule(items);
+      onScheduled(`${items.length} posts scheduled!`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="cc__overlay" onClick={onClose}>
+      <div className="cc__modal cc__modal--lg" onClick={(e) => e.stopPropagation()}>
+        <div className="cc__modal-header">
+          <h3><MdSchedule /> Bulk Schedule — {entries.length} Posts</h3>
+          <button onClick={onClose}><MdClose /></button>
+        </div>
+        <div className="cc__modal-body">
+          {error && (
+            <div className="cc__alert cc__alert--error" style={{ marginBottom: 16 }}>
+              {error}
+              <button onClick={() => setError('')}><MdClose /></button>
+            </div>
+          )}
+
+          {/* Mode Tabs */}
+          <div className="bs__tabs">
+            <button
+              className={`bs__tab ${mode === 'auto' ? 'bs__tab--active' : ''}`}
+              onClick={() => setMode('auto')}
+            >
+              <MdBolt /> Auto-Schedule
+            </button>
+            <button
+              className={`bs__tab ${mode === 'manual' ? 'bs__tab--active' : ''}`}
+              onClick={() => setMode('manual')}
+            >
+              <MdDateRange /> Manual Times
+            </button>
+          </div>
+
+          {mode === 'auto' ? (
+            <div className="bs__auto-section">
+              <div className="bs__auto-info">
+                <div className="bs__auto-icon"><MdBolt /></div>
+                <div>
+                  <h4>AI-Optimized Scheduling</h4>
+                  <p>Our AI will analyze each platform's peak engagement windows and schedule each post at the optimal time for maximum reach.</p>
+                </div>
+              </div>
+              <div className="bs__entries-preview">
+                {entries.map((e) => {
+                  const p = getPlatformMeta(e.platform);
+                  const Icon = p.icon;
+                  return (
+                    <div key={e.id} className="bs__entry-row">
+                      <span className="cc__platform-chip" style={{ '--p-color': p.color }}>
+                        {Icon && <Icon />} {p.name}
+                      </span>
+                      <span className="bs__entry-title">{e.title}</span>
+                      <span className="bs__entry-date">{e.date ? formatDate(e.date) : '—'}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                className="btn btn--primary cc__generate-btn"
+                onClick={handleAutoSchedule}
+                disabled={loading}
+              >
+                {loading ? <><span className="cc__spinner" /> Scheduling...</> : <><MdBolt /> Auto-Schedule All</>}
+              </button>
+            </div>
+          ) : (
+            <div className="bs__manual-section">
+              <p className="bs__manual-hint">Set a specific time for each post. Times are on the entry's scheduled date.</p>
+              <div className="bs__manual-list">
+                {entries.map((e) => {
+                  const p = getPlatformMeta(e.platform);
+                  const Icon = p.icon;
+                  return (
+                    <div key={e.id} className="bs__manual-row">
+                      <div className="bs__manual-info">
+                        <span className="cc__platform-chip" style={{ '--p-color': p.color }}>
+                          {Icon && <Icon />} {p.name}
+                        </span>
+                        <span className="bs__entry-title">{e.title}</span>
+                        <span className="bs__entry-date">{e.date ? formatDate(e.date) : '—'}</span>
+                      </div>
+                      <input
+                        type="time"
+                        value={manualTimes[e.id] || ''}
+                        onChange={(ev) => setManualTimes((prev) => ({ ...prev, [e.id]: ev.target.value }))}
+                        className="bs__time-input"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                className="btn btn--primary cc__generate-btn"
+                onClick={handleBulkManual}
+                disabled={loading}
+              >
+                {loading ? <><span className="cc__spinner" /> Scheduling...</> : <><MdSchedule /> Schedule All</>}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

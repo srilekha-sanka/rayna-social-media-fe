@@ -91,7 +91,7 @@ export default function Calendar() {
         start_date: startDate,
         end_date: endDate,
         platform: platformFilter || undefined,
-        status: 'APPROVED',
+        status: 'READY,SCHEDULED,PUBLISHED',
       });
       setEntries(Array.isArray(res) ? res : res.entries || []);
     } catch {
@@ -137,7 +137,7 @@ export default function Calendar() {
         <div className="cal__header-row">
           <div>
             <h2>Content Calendar</h2>
-            <p>Approved content scheduled across all platforms.</p>
+            <p>Finalized posts scheduled across all platforms.</p>
           </div>
           <button className="btn btn--primary btn--sm" onClick={() => navigate('/content-calendar')}>
             Open Planner
@@ -307,6 +307,11 @@ function DayDetailModal({ date, entries, onClose, onEntryCreated, onCreatePost }
                 const assets = entry.media_urls || entry.assets || [];
                 const contentType = CONTENT_TYPE_LABELS[entry.content_type] || entry.content_type;
 
+                const linkedPost = entry.post || null;
+                const postAssets = linkedPost?.media_urls || assets;
+                const statusLabel = entry.status === 'READY' ? 'Ready' : entry.status === 'SCHEDULED' ? 'Scheduled' : entry.status === 'PUBLISHED' ? 'Published' : entry.status;
+                const statusCls = entry.status === 'PUBLISHED' ? 'completed' : entry.status === 'READY' || entry.status === 'SCHEDULED' ? 'active' : 'draft';
+
                 return (
                   <div key={entry.id} className="cal__modal-card">
                     <div className="cal__modal-card-stripe" style={{ background: platform.color }} />
@@ -315,14 +320,31 @@ function DayDetailModal({ date, entries, onClose, onEntryCreated, onCreatePost }
                         <h4>{entry.title}</h4>
                         <div className="cal__modal-card-tags">
                           <span className="cal__modal-type">{contentType}</span>
-                          <span className={`badge badge--${entry.status === 'APPROVED' ? 'active' : entry.status === 'PUBLISHED' ? 'completed' : 'draft'}`}>
-                            {entry.status}
+                          <span className={`badge badge--${statusCls}`}>
+                            {statusLabel}
                           </span>
                         </div>
                       </div>
 
-                      {entry.description && (
+                      {linkedPost?.base_content && (
+                        <p className="cal__modal-card-desc">
+                          {linkedPost.base_content.length > 150
+                            ? linkedPost.base_content.slice(0, 150) + '...'
+                            : linkedPost.base_content}
+                        </p>
+                      )}
+
+                      {!linkedPost?.base_content && entry.description && (
                         <p className="cal__modal-card-desc">{entry.description}</p>
+                      )}
+
+                      {linkedPost?.hashtags && linkedPost.hashtags.length > 0 && (
+                        <div className="cal__modal-card-hashtags">
+                          {linkedPost.hashtags.slice(0, 5).map((tag, i) => (
+                            <span key={i} className="cal__hashtag">{tag.startsWith('#') ? tag : `#${tag}`}</span>
+                          ))}
+                          {linkedPost.hashtags.length > 5 && <span className="cal__hashtag-more">+{linkedPost.hashtags.length - 5}</span>}
+                        </div>
                       )}
 
                       {entry.ai_rationale && (
@@ -342,15 +364,15 @@ function DayDetailModal({ date, entries, onClose, onEntryCreated, onCreatePost }
                             <span className="cal__modal-plan">{entry.content_plan.name}</span>
                           )}
                         </div>
-                        {assets.length > 0 && (
+                        {postAssets.length > 0 && (
                           <div className="cal__modal-assets">
-                            {assets.slice(0, 4).map((url, i) => (
+                            {postAssets.slice(0, 4).map((url, i) => (
                               <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="cal__modal-asset">
                                 {url.match(/\.(mp4|mov|webm)/i) ? <MdPlayCircle /> : <MdImage />}
                               </a>
                             ))}
-                            {assets.length > 4 && (
-                              <span className="cal__modal-asset-more">+{assets.length - 4}</span>
+                            {postAssets.length > 4 && (
+                              <span className="cal__modal-asset-more">+{postAssets.length - 4}</span>
                             )}
                           </div>
                         )}

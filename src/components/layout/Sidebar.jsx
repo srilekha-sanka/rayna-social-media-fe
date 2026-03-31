@@ -11,6 +11,7 @@ import {
   MdArticle,
   MdAutoAwesome,
   MdLogout,
+  MdRateReview,
 } from 'react-icons/md';
 import { logout } from '../../services/api';
 
@@ -25,6 +26,7 @@ const navItems = [
       { to: '/content', label: 'Content Library', icon: <MdArticle /> },
       { to: '/calendar', label: 'Calendar', icon: <MdCalendarMonth /> },
       { to: '/content-calendar', label: 'Content Planner', icon: <MdCalendarMonth />, badge: 'AI' },
+      { to: '/review-queue', label: 'Review Queue', icon: <MdRateReview /> },
     ],
   },
   {

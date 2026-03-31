@@ -660,6 +660,32 @@
   margin-top: 8px;
 }
 
+/* ─── Hashtags ─────────────────────────────────────────── */
+
+.cal__modal-card-hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.cal__hashtag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f0ebff;
+  color: var(--primary);
+}
+
+.cal__hashtag-more {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  align-self: center;
+}
+
 /* ─── Responsive ────────────────────────────────────────── */
 
 @media (max-width: 768px) {
