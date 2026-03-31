@@ -4,7 +4,6 @@ import {
   MdCancel,
   MdFilterList,
   MdClose,
-  MdImage,
   MdCalendarToday,
   MdPerson,
   MdCampaign,
@@ -16,10 +15,19 @@ import {
   MdInbox,
   MdRefresh,
   MdVisibility,
+  MdSchedule,
+  MdRocketLaunch,
+  MdAccessTime,
+  MdStar,
+  MdBolt,
+  MdDateRange,
+  MdArrowRight,
+  MdCheckCircleOutline,
+  MdSkipNext,
 } from 'react-icons/md';
 import { PLATFORMS } from '../utils/platforms';
-import { fetchReviewQueue } from '../services/contentPlan';
-import { approvePost, rejectPost, getMediaUrl } from '../services/api';
+import { fetchReviewQueue, fetchSuggestedTimes, autoSchedule } from '../services/contentPlan';
+import { approvePost, rejectPost, schedulePost, publishPost, getMediaUrl } from '../services/api';
 import '../styles/review-queue.css';
 
 /* ── helpers ─────────────────────────────────────────── */
@@ -88,11 +96,15 @@ export default function ReviewQueue() {
   const [lightbox, setLightbox] = useState(null);
   const [previewId, setPreviewId] = useState(null);
 
+  // Schedule-after-approve state
+  const [approvedCards, setApprovedCards] = useState({}); // { [postId]: { suggestedTimes, loading, customTime, showCustom } }
+  const [scheduledCards, setScheduledCards] = useState(new Set()); // posts that completed scheduling (for exit animation)
+
   const limit = 12;
 
   const showToast = (msg) => {
     setToast(msg);
-    setTimeout(() => setToast(''), 3000);
+    setTimeout(() => setToast(''), 3500);
   };
 
   /* ── fetch ────────────────────────────────────────── */
@@ -117,17 +129,36 @@ export default function ReviewQueue() {
 
   useEffect(() => { load(); }, [load]);
 
-  /* ── actions ──────────────────────────────────────── */
-  const handleApprove = async (postId) => {
+  /* ── approve → transition to schedule ──────────── */
+  const handleApprove = async (postId, entryPlatform, entryDate) => {
     setActionLoading(postId);
     try {
       await approvePost(postId);
-      setItems((prev) => prev.filter((item) => {
-        const pid = item.post?.id || item.post?._id;
-        return pid !== postId;
+      showToast('Post approved — now schedule it!');
+
+      // Transition card to schedule phase
+      setApprovedCards((prev) => ({
+        ...prev,
+        [postId]: { suggestedTimes: [], loading: true, customTime: '', showCustom: false },
       }));
-      setTotal((t) => Math.max(0, t - 1));
-      showToast('Post approved successfully');
+
+      // Load suggested times in background
+      try {
+        const timesRes = await fetchSuggestedTimes({
+          date: entryDate,
+          platform: entryPlatform,
+        });
+        const times = timesRes.times || timesRes.suggested_times || timesRes;
+        setApprovedCards((prev) => ({
+          ...prev,
+          [postId]: { ...prev[postId], suggestedTimes: Array.isArray(times) ? times : [], loading: false },
+        }));
+      } catch {
+        setApprovedCards((prev) => ({
+          ...prev,
+          [postId]: { ...prev[postId], suggestedTimes: [], loading: false },
+        }));
+      }
     } catch (err) {
       showToast(`Error: ${err.message}`);
     } finally {
@@ -135,6 +166,70 @@ export default function ReviewQueue() {
     }
   };
 
+  /* ── schedule actions ─────────────────────────── */
+  const handleScheduleAt = async (postId, scheduledAt) => {
+    setActionLoading(postId);
+    try {
+      await schedulePost(postId, scheduledAt);
+      handleScheduleComplete(postId, `Scheduled for ${new Date(scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    } catch (err) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePublishNow = async (postId) => {
+    setActionLoading(postId);
+    try {
+      await publishPost(postId);
+      handleScheduleComplete(postId, 'Published successfully!');
+    } catch (err) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleAutoSchedule = async (postId) => {
+    setActionLoading(postId);
+    try {
+      await autoSchedule([postId]);
+      handleScheduleComplete(postId, 'Auto-scheduled with optimal time!');
+    } catch (err) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleScheduleComplete = (postId, message) => {
+    showToast(message);
+    setScheduledCards((prev) => new Set([...prev, postId]));
+    // Remove card after exit animation
+    setTimeout(() => {
+      setItems((prev) => prev.filter((item) => {
+        const pid = item.post?.id || item.post?._id;
+        return pid !== postId;
+      }));
+      setApprovedCards((prev) => { const n = { ...prev }; delete n[postId]; return n; });
+      setScheduledCards((prev) => { const n = new Set(prev); n.delete(postId); return n; });
+      setTotal((t) => Math.max(0, t - 1));
+    }, 600);
+  };
+
+  const handleSkipSchedule = (postId) => {
+    // Remove from approved state but keep in the list? No — it's approved, remove it.
+    setItems((prev) => prev.filter((item) => {
+      const pid = item.post?.id || item.post?._id;
+      return pid !== postId;
+    }));
+    setApprovedCards((prev) => { const n = { ...prev }; delete n[postId]; return n; });
+    setTotal((t) => Math.max(0, t - 1));
+    showToast('Approved — you can schedule it later from the calendar');
+  };
+
+  /* ── reject ────────────────────────────────────── */
   const handleReject = async () => {
     if (!rejectModal) return;
     const postId = rejectModal;
@@ -157,6 +252,7 @@ export default function ReviewQueue() {
   };
 
   const totalPages = Math.ceil(total / limit) || 1;
+  const pendingCount = items.filter((item) => !approvedCards[item.post?.id || item.post?._id]).length;
 
   /* ── render ───────────────────────────────────────── */
   return (
@@ -166,8 +262,13 @@ export default function ReviewQueue() {
         <div className="rq__header-left">
           <h1 className="rq__title">Review Queue</h1>
           <span className="rq__badge-count">
-            {loading ? '...' : total} pending
+            {loading ? '...' : pendingCount} pending
           </span>
+          {Object.keys(approvedCards).length > 0 && (
+            <span className="rq__badge-approved">
+              {Object.keys(approvedCards).length} to schedule
+            </span>
+          )}
         </div>
         <div className="rq__header-actions">
           <div className="rq__filter-group">
@@ -234,7 +335,7 @@ export default function ReviewQueue() {
               const plan = item.plan || item.content_plan;
               const author = item.author || post.author || post.created_by;
               const media = post.media_urls || post.slides?.map((s) => s.image_url) || entry.media_urls || [];
-              const caption = post.caption || entry.description || '';
+              const caption = post.caption || post.base_content || entry.description || '';
               const hashtags = post.hashtags || '';
               const title = entry.title || post.title || 'Untitled';
               const platform = entry.platform || post.platform || '';
@@ -242,9 +343,30 @@ export default function ReviewQueue() {
               const isExpanded = expandedId === postId;
               const isActioning = actionLoading === postId;
               const isPreviewing = previewId === postId;
+              const isApproved = !!approvedCards[postId];
+              const isScheduled = scheduledCards.has(postId);
+              const scheduleState = approvedCards[postId];
 
               return (
-                <div key={postId || entry.id || entry._id} className="rq__card">
+                <div
+                  key={postId || entry.id || entry._id}
+                  className={`rq__card ${isApproved ? 'rq__card--approved' : ''} ${isScheduled ? 'rq__card--scheduled' : ''}`}
+                >
+                  {/* ── Approved Badge Overlay ── */}
+                  {isApproved && !isScheduled && (
+                    <div className="rq__approved-banner">
+                      <MdCheckCircle /> Approved — Choose when to post
+                    </div>
+                  )}
+
+                  {/* ── Scheduled Success Overlay ── */}
+                  {isScheduled && (
+                    <div className="rq__scheduled-overlay">
+                      <MdCheckCircleOutline className="rq__scheduled-icon" />
+                      <span>Scheduled!</span>
+                    </div>
+                  )}
+
                   {/* Card Header */}
                   <div className="rq__card-top">
                     <div className="rq__card-meta">
@@ -279,7 +401,9 @@ export default function ReviewQueue() {
                       </button>
                     )}
                     {hashtags && (
-                      <p className="rq__card-hashtags">{hashtags}</p>
+                      <p className="rq__card-hashtags">
+                        {Array.isArray(hashtags) ? hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ') : hashtags}
+                      </p>
                     )}
                   </div>
 
@@ -311,79 +435,198 @@ export default function ReviewQueue() {
                     )}
                   </div>
 
-                  {/* Actions */}
-                  <div className="rq__card-actions">
-                    <button
-                      className="rq__action-btn rq__action-btn--reject"
-                      onClick={() => { setRejectModal(postId); setRejectReason(''); }}
-                      disabled={isActioning}
-                    >
-                      <MdCancel /> Reject
-                    </button>
-                    <button
-                      className="rq__action-btn rq__action-btn--preview"
-                      onClick={() => setPreviewId(isPreviewing ? null : postId)}
-                    >
-                      <MdVisibility /> Preview
-                    </button>
-                    <button
-                      className="rq__action-btn rq__action-btn--approve"
-                      onClick={() => handleApprove(postId)}
-                      disabled={isActioning}
-                    >
-                      {isActioning ? (
-                        <span className="rq__spinner" />
-                      ) : (
-                        <MdCheckCircle />
-                      )}
-                      Approve
-                    </button>
-                  </div>
-
-                  {/* Inline Preview Panel */}
-                  {isPreviewing && (
-                    <div className="rq__preview-panel">
-                      <div className="rq__preview-divider" />
-                      {media.length > 0 && (
-                        <div className="rq__preview-media-row">
-                          {media.map((url, i) => (
-                            <img
-                              key={i}
-                              src={getMediaUrl(url)}
-                              alt=""
-                              className="rq__preview-media-img"
-                              onClick={() => setLightbox({ urls: media.map(getMediaUrl), index: i })}
-                            />
-                          ))}
-                        </div>
-                      )}
-                      <div className="rq__preview-section">
-                        <label>Caption</label>
-                        <p>{caption || 'No caption'}</p>
+                  {/* ════════ PHASE 1: Review Actions ════════ */}
+                  {!isApproved && (
+                    <>
+                      <div className="rq__card-actions">
+                        <button
+                          className="rq__action-btn rq__action-btn--reject"
+                          onClick={() => { setRejectModal(postId); setRejectReason(''); }}
+                          disabled={isActioning}
+                        >
+                          <MdCancel /> Reject
+                        </button>
+                        <button
+                          className="rq__action-btn rq__action-btn--preview"
+                          onClick={() => setPreviewId(isPreviewing ? null : postId)}
+                        >
+                          <MdVisibility /> Preview
+                        </button>
+                        <button
+                          className="rq__action-btn rq__action-btn--approve"
+                          onClick={() => handleApprove(postId, platform, entry.date)}
+                          disabled={isActioning}
+                        >
+                          {isActioning ? <span className="rq__spinner" /> : <MdCheckCircle />}
+                          Approve
+                        </button>
                       </div>
-                      {hashtags && (
-                        <div className="rq__preview-section">
-                          <label>Hashtags</label>
-                          <p className="rq__preview-hashtags">{hashtags}</p>
-                        </div>
-                      )}
-                      {post.cta && (
-                        <div className="rq__preview-section">
-                          <label>Call to Action</label>
-                          <span className="rq__preview-cta">{post.cta}</span>
-                        </div>
-                      )}
-                      {product && (
-                        <div className="rq__preview-product">
-                          {product.images?.[0] && (
-                            <img src={getMediaUrl(product.images[0])} alt="" className="rq__preview-product-img" />
+
+                      {/* Inline Preview Panel */}
+                      {isPreviewing && (
+                        <div className="rq__preview-panel">
+                          <div className="rq__preview-divider" />
+                          {media.length > 0 && (
+                            <div className="rq__preview-media-row">
+                              {media.map((url, i) => (
+                                <img
+                                  key={i}
+                                  src={getMediaUrl(url)}
+                                  alt=""
+                                  className="rq__preview-media-img"
+                                  onClick={() => setLightbox({ urls: media.map(getMediaUrl), index: i })}
+                                />
+                              ))}
+                            </div>
                           )}
-                          <div>
-                            <strong>{product.name || product.title}</strong>
-                            {product.price && <span className="rq__preview-product-price">${product.price}</span>}
+                          <div className="rq__preview-section">
+                            <label>Caption</label>
+                            <p>{caption || 'No caption'}</p>
+                          </div>
+                          {hashtags && (
+                            <div className="rq__preview-section">
+                              <label>Hashtags</label>
+                              <p className="rq__preview-hashtags">
+                                {Array.isArray(hashtags) ? hashtags.join(' ') : hashtags}
+                              </p>
+                            </div>
+                          )}
+                          {(post.cta || post.cta_text) && (
+                            <div className="rq__preview-section">
+                              <label>Call to Action</label>
+                              <span className="rq__preview-cta">{post.cta || post.cta_text}</span>
+                            </div>
+                          )}
+                          {product && (
+                            <div className="rq__preview-product">
+                              {(product.images?.[0] || product.image) && (
+                                <img src={getMediaUrl(product.images?.[0] || product.image)} alt="" className="rq__preview-product-img" />
+                              )}
+                              <div>
+                                <strong>{product.name || product.title}</strong>
+                                {product.price && <span className="rq__preview-product-price">{product.currency || 'AED'} {product.sale_price || product.price}</span>}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* ════════ PHASE 2: Schedule Actions ════════ */}
+                  {isApproved && !isScheduled && (
+                    <div className="rq__schedule-panel">
+                      <div className="rq__schedule-divider" />
+
+                      {/* Suggested Times */}
+                      {scheduleState.loading ? (
+                        <div className="rq__schedule-loading">
+                          <span className="rq__spinner rq__spinner--purple" />
+                          <span>Finding best times...</span>
+                        </div>
+                      ) : scheduleState.suggestedTimes.length > 0 ? (
+                        <div className="rq__times-section">
+                          <div className="rq__times-header">
+                            <MdAccessTime /> Best Times
+                          </div>
+                          <div className="rq__times-list">
+                            {scheduleState.suggestedTimes.slice(0, 3).map((slot, i) => {
+                              const time = slot.time || slot.suggested_time;
+                              const label = slot.label || slot.reason || slot.description || '';
+                              const score = slot.score || slot.engagement_score;
+                              const entryDate = entry.date || entry.scheduled_date || new Date().toISOString().split('T')[0];
+                              return (
+                                <button
+                                  key={i}
+                                  className={`rq__time-slot ${i === 0 ? 'rq__time-slot--top' : ''}`}
+                                  onClick={() => handleScheduleAt(postId, `${entryDate}T${time}:00`)}
+                                  disabled={isActioning}
+                                >
+                                  <div className="rq__time-left">
+                                    {i === 0 && <MdStar className="rq__time-star" />}
+                                    <span className="rq__time-value">{time}</span>
+                                    {label && <span className="rq__time-label">{label}</span>}
+                                  </div>
+                                  <div className="rq__time-right">
+                                    {score && (
+                                      <span className={`rq__score ${score >= 90 ? 'rq__score--high' : score >= 80 ? 'rq__score--mid' : ''}`}>
+                                        {score}
+                                      </span>
+                                    )}
+                                    <MdArrowRight className="rq__time-go" />
+                                  </div>
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
+                      ) : null}
+
+                      {/* Custom Time */}
+                      {!scheduleState.loading && (
+                        <>
+                          <button
+                            className="rq__custom-toggle"
+                            onClick={() => setApprovedCards((prev) => ({
+                              ...prev,
+                              [postId]: { ...prev[postId], showCustom: !prev[postId].showCustom },
+                            }))}
+                          >
+                            <MdDateRange /> {scheduleState.showCustom ? 'Hide' : 'Pick'} custom time
+                          </button>
+
+                          {scheduleState.showCustom && (
+                            <div className="rq__custom-row">
+                              <input
+                                type="time"
+                                value={scheduleState.customTime}
+                                onChange={(e) => setApprovedCards((prev) => ({
+                                  ...prev,
+                                  [postId]: { ...prev[postId], customTime: e.target.value },
+                                }))}
+                                className="rq__custom-input"
+                              />
+                              <button
+                                className="rq__custom-go"
+                                onClick={() => {
+                                  if (!scheduleState.customTime) return;
+                                  const entryDate = entry.date || entry.scheduled_date || new Date().toISOString().split('T')[0];
+                                  handleScheduleAt(postId, `${entryDate}T${scheduleState.customTime}:00`);
+                                }}
+                                disabled={!scheduleState.customTime || isActioning}
+                              >
+                                <MdSchedule /> Schedule
+                              </button>
+                            </div>
+                          )}
+                        </>
                       )}
+
+                      {/* Quick Actions */}
+                      <div className="rq__schedule-actions">
+                        <button
+                          className="rq__sched-btn rq__sched-btn--publish"
+                          onClick={() => handlePublishNow(postId)}
+                          disabled={isActioning}
+                        >
+                          {isActioning && actionLoading === postId ? <span className="rq__spinner" /> : <MdRocketLaunch />}
+                          Publish Now
+                        </button>
+                        <button
+                          className="rq__sched-btn rq__sched-btn--auto"
+                          onClick={() => handleAutoSchedule(postId)}
+                          disabled={isActioning}
+                        >
+                          <MdBolt /> Auto-Schedule
+                        </button>
+                        <button
+                          className="rq__sched-btn rq__sched-btn--skip"
+                          onClick={() => handleSkipSchedule(postId)}
+                          disabled={isActioning}
+                        >
+                          <MdSkipNext /> Later
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

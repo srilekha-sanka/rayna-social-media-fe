@@ -845,6 +845,392 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ─── Badge Approved Count ────────────────────────────── */
+
+.rq__badge-approved {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+/* ════════ APPROVED CARD STATE ════════ */
+
+.rq__card--approved {
+  border-color: #86efac;
+  background: linear-gradient(180deg, #f0fdf4 0%, var(--bg-secondary) 40%);
+}
+
+.rq__card--approved:hover {
+  border-color: #4ade80;
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.1);
+}
+
+/* Approved Banner */
+.rq__approved-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  animation: rq-banner-in 0.3s ease-out;
+}
+
+@keyframes rq-banner-in {
+  from { max-height: 0; padding: 0 20px; opacity: 0; }
+  to { max-height: 50px; padding: 10px 20px; opacity: 1; }
+}
+
+.rq__approved-banner svg {
+  font-size: 18px;
+}
+
+/* ════════ SCHEDULED SUCCESS OVERLAY ════════ */
+
+.rq__card--scheduled {
+  opacity: 0;
+  transform: scale(0.95) translateY(-10px);
+  transition: all 0.5s ease;
+  pointer-events: none;
+}
+
+.rq__scheduled-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 10;
+  border-radius: 18px;
+  animation: rq-check-in 0.4s ease-out;
+}
+
+@keyframes rq-check-in {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+.rq__scheduled-icon {
+  font-size: 48px;
+  color: #10b981;
+  animation: rq-check-scale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes rq-check-scale {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+.rq__scheduled-overlay span {
+  font-size: 16px;
+  font-weight: 700;
+  color: #166534;
+}
+
+/* ════════ SCHEDULE PANEL (Phase 2) ════════ */
+
+.rq__schedule-panel {
+  padding: 0 20px 18px;
+  animation: rq-sched-in 0.35s ease-out;
+}
+
+@keyframes rq-sched-in {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 600px; }
+}
+
+.rq__schedule-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #86efac, transparent);
+  margin-bottom: 16px;
+}
+
+/* Loading */
+.rq__schedule-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.rq__spinner--purple {
+  border-color: rgba(124, 58, 237, 0.2);
+  border-top-color: var(--primary);
+}
+
+/* ─── Suggested Times ─────────────────────────────────── */
+
+.rq__times-section {
+  margin-bottom: 12px;
+}
+
+.rq__times-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.rq__times-header svg {
+  font-size: 16px;
+  color: var(--primary);
+}
+
+.rq__times-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.rq__time-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.rq__time-slot:hover:not(:disabled) {
+  border-color: var(--primary-light);
+  background: #f5f3ff;
+  transform: translateX(3px);
+}
+
+.rq__time-slot:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rq__time-slot--top {
+  border-color: #86efac;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+}
+
+.rq__time-slot--top:hover:not(:disabled) {
+  border-color: #4ade80;
+  background: #dcfce7;
+}
+
+.rq__time-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rq__time-star {
+  font-size: 16px;
+  color: #f59e0b;
+}
+
+.rq__time-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.rq__time-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
+.rq__time-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rq__score {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.rq__score--high {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.rq__score--mid {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.rq__time-go {
+  font-size: 18px;
+  color: var(--text-secondary);
+  opacity: 0;
+  transition: all 0.15s;
+}
+
+.rq__time-slot:hover .rq__time-go {
+  opacity: 1;
+  transform: translateX(2px);
+  color: var(--primary);
+}
+
+/* ─── Custom Time ─────────────────────────────────────── */
+
+.rq__custom-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0 4px;
+}
+
+.rq__custom-toggle:hover {
+  text-decoration: underline;
+}
+
+.rq__custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.rq__custom-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  transition: border-color 0.15s;
+}
+
+.rq__custom-input:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+  outline: none;
+}
+
+.rq__custom-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.rq__custom-go:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.rq__custom-go:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Schedule Action Buttons ─────────────────────────── */
+
+.rq__schedule-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.rq__sched-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.rq__sched-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rq__sched-btn--publish {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.rq__sched-btn--publish:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transform: translateY(-1px);
+}
+
+.rq__sched-btn--auto {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+
+.rq__sched-btn--auto:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  transform: translateY(-1px);
+}
+
+.rq__sched-btn--skip {
+  background: none;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  flex: 0;
+  padding: 10px 12px;
+}
+
+.rq__sched-btn--skip:hover:not(:disabled) {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
 /* ─── Responsive ──────────────────────────────────────── */
 
 @media (max-width: 900px) {
@@ -871,6 +1257,14 @@
     order: -1;
   }
 
+  .rq__schedule-actions {
+    flex-wrap: wrap;
+  }
+
+  .rq__sched-btn--skip {
+    flex: 0 0 auto;
+  }
+
   .rq__pagination {
     flex-direction: column;
     gap: 10px;
@@ -879,5 +1273,14 @@
   .rq__modal {
     max-width: 100%;
     border-radius: 16px;
+  }
+
+  .rq__custom-row {
+    flex-direction: column;
+  }
+
+  .rq__custom-go {
+    width: 100%;
+    justify-content: center;
   }
 }

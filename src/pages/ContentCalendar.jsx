@@ -1855,23 +1855,32 @@ function SchedulePanel({ entry, onClose, onScheduled }) {
     async function load() {
       setLoading(true);
       setError('');
+
+      // Fetch detail and suggested times independently — either can fail
+      let detailRes = null;
+      let times = [];
+
       try {
-        const [detailRes, timesRes] = await Promise.all([
-          fetchEntryDetail(entry.id),
-          fetchSuggestedTimes({
-            date: entry.date || entry.scheduled_date,
-            platform: entry.platform,
-          }),
-        ]);
-        if (cancelled) return;
-        setDetail(detailRes);
-        const times = timesRes.times || timesRes.suggested_times || timesRes;
-        setSuggestedTimes(Array.isArray(times) ? times : []);
-      } catch (err) {
-        if (!cancelled) setError(err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
+        detailRes = await fetchEntryDetail(entry.id);
+      } catch {
+        // Entry detail endpoint may not exist yet — use entry/post data we already have
       }
+
+      try {
+        const timesRes = await fetchSuggestedTimes({
+          date: entry.date || entry.scheduled_date,
+          platform: entry.platform,
+        });
+        const raw = timesRes.times || timesRes.suggested_times || timesRes;
+        times = Array.isArray(raw) ? raw : [];
+      } catch {
+        // Suggested times endpoint may not exist yet — show custom time picker instead
+      }
+
+      if (cancelled) return;
+      setDetail(detailRes);
+      setSuggestedTimes(times);
+      setLoading(false);
     }
 
     load();

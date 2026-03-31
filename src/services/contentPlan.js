@@ -15,6 +15,12 @@ async function request(endpoint, options = {}) {
     },
   });
 
+  // Guard against non-JSON responses (e.g. HTML 404 pages)
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(res.ok ? 'Unexpected response format' : `Request failed (${res.status})`);
+  }
+
   const data = await res.json();
 
   if (!res.ok) {
