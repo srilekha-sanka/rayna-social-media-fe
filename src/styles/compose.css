@@ -1,0 +1,696 @@
+/* ========== Content Source Picker (csp__) ========== */
+
+.csp__modal {
+  max-width: 780px;
+}
+
+/* ─── Source Picker (Step 1) ──────────────────────────── */
+
+.csp__picker {
+  text-align: center;
+}
+
+.csp__picker-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.csp__picker-context {
+  margin-bottom: 24px;
+}
+
+.csp__picker-entry-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.csp__picker-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.csp__picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* ─── Source Card ─────────────────────────────────────── */
+
+.csp__source-card {
+  position: relative;
+  background: var(--bg-primary);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 16px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.csp__source-card:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.csp__source-card:active {
+  transform: translateY(0);
+}
+
+.csp__source-card--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.csp__source-card--disabled:hover {
+  border-color: var(--border);
+  box-shadow: none;
+  transform: none;
+}
+
+.csp__source-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #fff;
+}
+
+.csp__source-icon--product {
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+}
+
+.csp__source-icon--stock {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+}
+
+.csp__source-icon--ai {
+  background: linear-gradient(135deg, #ec4899, #f472b6);
+}
+
+.csp__source-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.csp__source-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.csp__source-disabled-text {
+  font-size: 11px;
+  color: var(--error);
+  font-weight: 500;
+}
+
+/* ── Product Preview inside source card ── */
+
+.csp__product-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 8px 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.csp__product-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.csp__product-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.csp__product-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.csp__product-price {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* ── AI style tags in source card ── */
+
+.csp__ai-styles {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.csp__ai-style-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #fdf2f8;
+  color: var(--accent);
+}
+
+/* ─── Step Header & Footer (shared) ──────────────────── */
+
+.csp__step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.csp__step-header h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.csp__back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.csp__back-btn:hover {
+  background: var(--border-light);
+  color: var(--text-primary);
+}
+
+.csp__step-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+
+.csp__selection-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ─── Options Panel (shared) ─────────────────────────── */
+
+.csp__options-panel {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.csp__options-panel h5 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.csp__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.csp__checkbox:last-child {
+  margin-bottom: 0;
+}
+
+.csp__checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ─── Stock Browser ──────────────────────────────────── */
+
+.csp__stock-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.csp__stock-search-input-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.csp__stock-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.csp__stock-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--bg-primary);
+  transition: border-color 0.15s;
+}
+
+.csp__stock-search-input:focus {
+  border-color: var(--primary-light);
+  background: var(--bg-secondary);
+}
+
+.csp__stock-orientation {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--bg-primary);
+  min-width: 110px;
+}
+
+/* ── Stock Grid ── */
+
+.csp__stock-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.csp__stock-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.csp__stock-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.csp__stock-item:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.csp__stock-item--selected {
+  border-color: var(--primary);
+}
+
+.csp__stock-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Stock Pagination ── */
+
+.csp__stock-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.csp__stock-page-info {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ── Stock Divider ── */
+
+.csp__stock-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.csp__stock-divider::before,
+.csp__stock-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Upload ── */
+
+.csp__upload-btn {
+  width: 100%;
+  padding: 14px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+
+.csp__upload-btn:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
+  background: #f5f3ff;
+}
+
+.csp__upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.csp__upload-previews {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.csp__upload-preview {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.csp__upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.csp__upload-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  padding: 0;
+}
+
+/* ─── AI Generator Config ────────────────────────────── */
+
+.csp__ai-context {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.csp__ai-context-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.csp__ai-context strong {
+  display: block;
+  font-size: 14px;
+  margin: 4px 0 8px;
+}
+
+.csp__ai-section {
+  margin-bottom: 20px;
+}
+
+.csp__ai-section-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+
+.csp__optional {
+  text-transform: none;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* ── Style Grid ── */
+
+.csp__ai-style-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.csp__ai-style-card {
+  background: var(--bg-primary);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.csp__ai-style-card:hover {
+  border-color: var(--primary-light);
+}
+
+.csp__ai-style-card--active {
+  border-color: var(--primary);
+  background: #f5f3ff;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.csp__ai-style-emoji {
+  font-size: 24px;
+}
+
+.csp__ai-style-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── Num Picker ── */
+
+.csp__ai-num-picker {
+  display: flex;
+  gap: 8px;
+}
+
+.csp__ai-num-btn {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-primary);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.csp__ai-num-btn:hover {
+  border-color: var(--primary-light);
+}
+
+.csp__ai-num-btn--active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ── Prompt ── */
+
+.csp__ai-prompt {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--bg-primary);
+  resize: vertical;
+  min-height: 70px;
+  transition: border-color 0.15s;
+}
+
+.csp__ai-prompt:focus {
+  border-color: var(--primary-light);
+  background: var(--bg-secondary);
+}
+
+.csp__ai-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.csp__ai-tip svg {
+  color: var(--accent);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ─── Compose Progress ───────────────────────────────── */
+
+.csp__progress {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.csp__progress-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 16px;
+}
+
+.csp__progress-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  margin-bottom: 24px;
+}
+
+.csp__progress-steps {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.csp__progress-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.csp__progress-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.csp__progress-icon--active {
+  color: var(--primary);
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .csp__picker-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .csp__ai-style-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .csp__stock-search {
+    flex-wrap: wrap;
+  }
+
+  .csp__stock-orientation {
+    min-width: 0;
+    flex: 1;
+  }
+}

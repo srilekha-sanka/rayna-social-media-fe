@@ -55,6 +55,7 @@ import {
   MdArrowForward,
   MdInventory,
 } from 'react-icons/md';
+import ContentSourceModal from '../components/compose/ContentSourceModal';
 import '../styles/content-calendar.css';
 
 // Backend-supported platforms with correct IDs
@@ -153,6 +154,7 @@ export default function ContentCalendar() {
   const [showAIFillModal, setShowAIFillModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [composingEntry, setComposingEntry] = useState(null); // entry being composed into a post
+  const [sourcePickerEntry, setSourcePickerEntry] = useState(null); // entry for content source selection
   const [scheduleEntry, setScheduleEntry] = useState(null); // entry opened in schedule panel
   const [showBulkScheduleModal, setShowBulkScheduleModal] = useState(false);
 
@@ -304,7 +306,13 @@ export default function ContentCalendar() {
   }
 
   async function handleComposeEntry(entry) {
-    setComposingEntry(entry);
+    // Entries already composing have a post — go straight to the editor
+    if (entry.status === 'COMPOSING' && entry.post) {
+      setComposingEntry(entry);
+    } else {
+      // Fresh compose — let user pick content source first
+      setSourcePickerEntry(entry);
+    }
   }
 
   // ─── Filtering ──────────────────────────────────────────
@@ -677,6 +685,26 @@ export default function ContentCalendar() {
             setEditingEntry(null);
             showToast(editingEntry ? 'Entry updated' : 'Entry created');
             loadPlanEntries(activePlan);
+          }}
+        />
+      )}
+
+      {/* ─── Content Source Picker Modal ─────────────────────── */}
+      {sourcePickerEntry && (
+        <ContentSourceModal
+          entry={sourcePickerEntry}
+          onClose={() => setSourcePickerEntry(null)}
+          onComposed={({ post, entry: updatedEntry }) => {
+            setSourcePickerEntry(null);
+            // Open PostComposer with the newly composed entry
+            setComposingEntry({
+              ...sourcePickerEntry,
+              ...updatedEntry,
+              status: 'COMPOSING',
+              post,
+            });
+            showToast('Post created — now edit your content');
+            if (activePlan) loadPlanEntries(activePlan);
           }}
         />
       )}
