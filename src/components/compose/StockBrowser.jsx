@@ -22,6 +22,7 @@ export default function StockBrowser({
   onCompose,
   onBack,
   composing,
+  nextLabel,
 }) {
   const [term, setTerm] = useState('');
   const [orientation, setOrientation] = useState('');
@@ -241,7 +242,7 @@ export default function StockBrowser({
           {totalSelected > 0 ? `${totalSelected} image${totalSelected > 1 ? 's' : ''} selected` : 'No images selected'}
         </span>
         <button className="btn btn--primary" onClick={handleCompose} disabled={!canCompose}>
-          {composing ? <><span className="cc__spinner" /> Composing...</> : 'Compose'}
+          {composing ? <><span className="cc__spinner" /> Composing...</> : (nextLabel || 'Compose')}
         </button>
       </div>
     </div>

@@ -54,6 +54,7 @@ import {
   MdBolt,
   MdArrowForward,
   MdInventory,
+  MdRefresh,
 } from 'react-icons/md';
 import ContentSourceModal from '../components/compose/ContentSourceModal';
 import '../styles/content-calendar.css';
@@ -694,7 +695,7 @@ export default function ContentCalendar() {
         <ContentSourceModal
           entry={sourcePickerEntry}
           onClose={() => setSourcePickerEntry(null)}
-          onComposed={({ post, entry: updatedEntry }) => {
+          onComposed={({ post, entry: updatedEntry, template_name }) => {
             setSourcePickerEntry(null);
             // Open PostComposer with the newly composed entry
             setComposingEntry({
@@ -702,6 +703,7 @@ export default function ContentCalendar() {
               ...updatedEntry,
               status: 'COMPOSING',
               post,
+              _template_name: template_name || null,
             });
             showToast('Post created — now edit your content');
             if (activePlan) loadPlanEntries(activePlan);
@@ -715,6 +717,13 @@ export default function ContentCalendar() {
           entry={composingEntry}
           onClose={() => setComposingEntry(null)}
           onDone={(msg) => {
+            if (msg === '__RETRY_STYLE__') {
+              // User clicked "Try Another Style" — reopen source modal for this entry
+              const retryEntry = composingEntry;
+              setComposingEntry(null);
+              setSourcePickerEntry(retryEntry);
+              return;
+            }
             setComposingEntry(null);
             showToast(msg || 'Post updated');
             if (activePlan) loadPlanEntries(activePlan);
@@ -1780,6 +1789,17 @@ function PostComposer({ entry, onClose, onDone }) {
                       </div>
                     ))}
                   </div>
+                  {entry._template_name && (
+                    <div className="pc__template-tag">
+                      <span className="pc__template-tag-label">Style: {entry._template_name}</span>
+                      <button
+                        className="pc__template-tag-retry"
+                        onClick={() => onDone('__RETRY_STYLE__')}
+                      >
+                        <MdRefresh /> Try Another Style
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
