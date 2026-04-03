@@ -1009,6 +1009,43 @@
   backdrop-filter: blur(4px);
 }
 
+/* ── Template style tag below media ── */
+
+.pc__template-tag {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.pc__template-tag-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.pc__template-tag-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+  transition: opacity 0.15s;
+}
+
+.pc__template-tag-retry:hover {
+  opacity: 0.8;
+}
+
+.pc__template-tag-retry svg {
+  font-size: 14px;
+}
+
 .pc__slide-card-overlay {
   position: absolute;
   inset: 0;

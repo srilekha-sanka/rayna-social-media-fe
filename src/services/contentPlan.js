@@ -83,6 +83,13 @@ export async function quickCreatePlan(payload) {
   });
 }
 
+// ─── Design Templates ────────────────────────────────────
+
+export async function fetchDesignTemplates(mediaType = 'image') {
+  const params = new URLSearchParams({ media_type: mediaType });
+  return request(`/content-studio/design-templates?${params}`);
+}
+
 // ─── Calendar Entries ─────────────────────────────────────
 
 export async function fetchCalendar({ start_date, end_date, platform, status } = {}) {

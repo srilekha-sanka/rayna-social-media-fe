@@ -54,7 +54,9 @@ import {
   MdBolt,
   MdArrowForward,
   MdInventory,
+  MdRefresh,
 } from 'react-icons/md';
+import ContentSourceModal from '../components/compose/ContentSourceModal';
 import '../styles/content-calendar.css';
 
 // Backend-supported platforms with correct IDs
@@ -153,6 +155,7 @@ export default function ContentCalendar() {
   const [showAIFillModal, setShowAIFillModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [composingEntry, setComposingEntry] = useState(null); // entry being composed into a post
+  const [sourcePickerEntry, setSourcePickerEntry] = useState(null); // entry for content source selection
   const [scheduleEntry, setScheduleEntry] = useState(null); // entry opened in schedule panel
   const [showBulkScheduleModal, setShowBulkScheduleModal] = useState(false);
 
@@ -304,7 +307,13 @@ export default function ContentCalendar() {
   }
 
   async function handleComposeEntry(entry) {
-    setComposingEntry(entry);
+    // Entries already composing have a post — go straight to the editor
+    if (entry.status === 'COMPOSING' && entry.post) {
+      setComposingEntry(entry);
+    } else {
+      // Fresh compose — let user pick content source first
+      setSourcePickerEntry(entry);
+    }
   }
 
   // ─── Filtering ──────────────────────────────────────────
@@ -681,12 +690,40 @@ export default function ContentCalendar() {
         />
       )}
 
+      {/* ─── Content Source Picker Modal ─────────────────────── */}
+      {sourcePickerEntry && (
+        <ContentSourceModal
+          entry={sourcePickerEntry}
+          onClose={() => setSourcePickerEntry(null)}
+          onComposed={({ post, entry: updatedEntry, template_name }) => {
+            setSourcePickerEntry(null);
+            // Open PostComposer with the newly composed entry
+            setComposingEntry({
+              ...sourcePickerEntry,
+              ...updatedEntry,
+              status: 'COMPOSING',
+              post,
+              _template_name: template_name || null,
+            });
+            showToast('Post created — now edit your content');
+            if (activePlan) loadPlanEntries(activePlan);
+          }}
+        />
+      )}
+
       {/* ─── Post Composer Modal ────────────────────────────── */}
       {composingEntry && (
         <PostComposer
           entry={composingEntry}
           onClose={() => setComposingEntry(null)}
           onDone={(msg) => {
+            if (msg === '__RETRY_STYLE__') {
+              // User clicked "Try Another Style" — reopen source modal for this entry
+              const retryEntry = composingEntry;
+              setComposingEntry(null);
+              setSourcePickerEntry(retryEntry);
+              return;
+            }
             setComposingEntry(null);
             showToast(msg || 'Post updated');
             if (activePlan) loadPlanEntries(activePlan);
@@ -1752,6 +1789,17 @@ function PostComposer({ entry, onClose, onDone }) {
                       </div>
                     ))}
                   </div>
+                  {entry._template_name && (
+                    <div className="pc__template-tag">
+                      <span className="pc__template-tag-label">Style: {entry._template_name}</span>
+                      <button
+                        className="pc__template-tag-retry"
+                        onClick={() => onDone('__RETRY_STYLE__')}
+                      >
+                        <MdRefresh /> Try Another Style
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
