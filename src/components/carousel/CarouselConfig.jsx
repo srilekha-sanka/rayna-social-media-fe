@@ -1,6 +1,6 @@
 import { PLATFORMS } from '../../utils/platforms';
 
-const SUPPORTED_PLATFORMS = ['instagram', 'facebook', 'linkedin', 'twitter', 'pinterest'];
+const SUPPORTED_PLATFORMS = ['instagram', 'facebook', 'linkedin', 'x', 'pinterest'];
 
 function CarouselConfig({ product, platform, setPlatform, slideCount, setSlideCount, onBack }) {
   const name = product.name || product.title || 'Selected Product';

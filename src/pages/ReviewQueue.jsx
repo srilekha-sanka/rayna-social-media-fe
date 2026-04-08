@@ -28,6 +28,7 @@ import {
 import { PLATFORMS } from '../utils/platforms';
 import { fetchReviewQueue, fetchSuggestedTimes, autoSchedule } from '../services/contentPlan';
 import { approvePost, rejectPost, schedulePost, publishPost, getMediaUrl } from '../services/api';
+import AccountSelector from '../components/common/AccountSelector';
 import '../styles/review-queue.css';
 
 /* ── helpers ─────────────────────────────────────────── */
@@ -99,6 +100,7 @@ export default function ReviewQueue() {
   // Schedule-after-approve state
   const [approvedCards, setApprovedCards] = useState({}); // { [postId]: { suggestedTimes, loading, customTime, showCustom } }
   const [scheduledCards, setScheduledCards] = useState(new Set()); // posts that completed scheduling (for exit animation)
+  const [selectedAccountIds, setSelectedAccountIds] = useState({}); // { [postId]: string[] }
 
   const limit = 12;
 
@@ -170,7 +172,8 @@ export default function ReviewQueue() {
   const handleScheduleAt = async (postId, scheduledAt) => {
     setActionLoading(postId);
     try {
-      await schedulePost(postId, scheduledAt);
+      const acctIds = selectedAccountIds[postId];
+      await schedulePost(postId, scheduledAt, { social_account_ids: acctIds });
       handleScheduleComplete(postId, `Scheduled for ${new Date(scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
     } catch (err) {
       showToast(`Error: ${err.message}`);
@@ -182,7 +185,8 @@ export default function ReviewQueue() {
   const handlePublishNow = async (postId) => {
     setActionLoading(postId);
     try {
-      await publishPost(postId);
+      const acctIds = selectedAccountIds[postId];
+      await publishPost(postId, { social_account_ids: acctIds });
       handleScheduleComplete(postId, 'Published successfully!');
     } catch (err) {
       showToast(`Error: ${err.message}`);
@@ -517,6 +521,13 @@ export default function ReviewQueue() {
                   {isApproved && !isScheduled && (
                     <div className="rq__schedule-panel">
                       <div className="rq__schedule-divider" />
+
+                      {/* Account Selector */}
+                      <AccountSelector
+                        selectedIds={selectedAccountIds[postId] || []}
+                        onChange={(ids) => setSelectedAccountIds((prev) => ({ ...prev, [postId]: ids }))}
+                        filterPlatforms={platform ? [platform] : undefined}
+                      />
 
                       {/* Suggested Times */}
                       {scheduleState.loading ? (

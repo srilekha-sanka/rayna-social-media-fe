@@ -104,9 +104,7 @@ const LANGUAGE_OPTIONS = [
 
 // Map backend platform ID to PLATFORMS util for icon/color lookup
 function getPlanPlatformUI(id) {
-  // 'x' in backend maps to 'twitter' in our PLATFORMS util
-  const mappedId = id === 'x' ? 'twitter' : id;
-  return PLATFORMS.find((p) => p.id === mappedId) || { name: id, color: '#6b7280' };
+  return PLATFORMS.find((p) => p.id === id) || { name: id, color: '#6b7280' };
 }
 
 const CONTENT_TYPE_LABELS = {
@@ -132,8 +130,7 @@ const STATUS_MAP = {
 };
 
 function getPlatformMeta(id) {
-  const mappedId = id === 'x' ? 'twitter' : id;
-  return PLATFORMS.find((p) => p.id === mappedId) || { name: id, color: '#6b7280' };
+  return PLATFORMS.find((p) => p.id === id) || { name: id, color: '#6b7280' };
 }
 
 function formatDate(dateStr) {

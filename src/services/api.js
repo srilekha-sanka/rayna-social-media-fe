@@ -227,17 +227,62 @@ export async function rejectPost(postId, reason) {
   return res.payload || res.data;
 }
 
-export async function publishPost(postId) {
-  const res = await request(`/posts/${postId}/publish`, { method: 'POST' });
+export async function publishPost(postId, { social_account_ids } = {}) {
+  const body = social_account_ids?.length ? { social_account_ids } : undefined;
+  const res = await request(`/posts/${postId}/publish`, {
+    method: 'POST',
+    ...(body && { body: JSON.stringify(body) }),
+  });
   return res.payload || res.data;
 }
 
-export async function schedulePost(postId, scheduledAt) {
+export async function schedulePost(postId, scheduledAt, { social_account_ids } = {}) {
+  const payload = { scheduled_at: scheduledAt };
+  if (social_account_ids?.length) payload.social_account_ids = social_account_ids;
   const res = await request(`/posts/${postId}/schedule`, {
     method: 'POST',
-    body: JSON.stringify({ scheduled_at: scheduledAt }),
+    body: JSON.stringify(payload),
   });
   return res.payload || res.data;
+}
+
+// ─── Social Accounts (PostForMe) ────────────────────────
+
+export async function getSocialAuthUrl(platform, connectionType) {
+  const payload = { platform };
+  if (connectionType) payload.connection_type = connectionType;
+  const res = await request('/social-accounts/auth-url', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return res.data || res.payload || res;
+}
+
+export async function fetchSocialAccounts({ platform, status, page = 1, limit = 50 } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (platform) params.set('platform', platform);
+  if (status) params.set('status', status);
+  const res = await request(`/social-accounts?${params.toString()}`);
+  const data = res.data || res.payload || res;
+  return {
+    accounts: data.accounts || [],
+    pagination: data.pagination || { page, limit, total: 0, totalPages: 0 },
+  };
+}
+
+export async function getSocialAccount(id) {
+  const res = await request(`/social-accounts/${id}`);
+  return res.data || res.payload || res;
+}
+
+export async function disconnectSocialAccount(id) {
+  const res = await request(`/social-accounts/${id}`, { method: 'DELETE' });
+  return res.data || res.payload || res;
+}
+
+export async function refreshSocialAccount(id) {
+  const res = await request(`/social-accounts/${id}/refresh`, { method: 'POST' });
+  return res.data || res.payload || res;
 }
 
 // ─── Instagram Integration ──────────────────────────────

@@ -1,0 +1,220 @@
+/* ========== Platforms Page ========== */
+
+.plat__toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  animation: plat__toast-in 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.plat__toast--success {
+  background: var(--success);
+}
+
+.plat__toast--error {
+  background: var(--error);
+}
+
+@keyframes plat__toast-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Accounts grid ─── */
+.plat__accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.plat__account-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: box-shadow 0.2s;
+}
+
+.plat__account-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.plat__account-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.plat__account-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.plat__account-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.plat__account-username {
+  display: block;
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plat__account-platform {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.plat__account-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.plat__account-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ─── Danger button ─── */
+.plat__btn-danger {
+  color: var(--error) !important;
+  border-color: var(--error) !important;
+}
+
+.plat__btn-danger:hover {
+  background: #fef2f2 !important;
+}
+
+.plat__btn-danger-fill {
+  background: var(--error);
+  color: #fff;
+  padding: 9px 18px;
+  border-radius: var(--radius-xl);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.plat__btn-danger-fill:hover {
+  background: #dc2626;
+}
+
+/* ─── Confirm modal ─── */
+.plat__confirm-modal {
+  max-width: 420px;
+  padding: 28px;
+}
+
+.plat__confirm-modal h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.plat__confirm-modal p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.plat__confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* ─── Spin animation ─── */
+.plat__spin {
+  animation: plat__spin-anim 1s linear infinite;
+}
+
+@keyframes plat__spin-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Account selector (compose flow) ─── */
+.acct-select {
+  margin-bottom: 16px;
+}
+
+.acct-select__label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.acct-select__group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin: 10px 0 6px;
+}
+
+.acct-select__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.acct-select__chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--border);
+  background: var(--bg-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-secondary);
+}
+
+.acct-select__chip:hover {
+  border-color: var(--primary-light);
+  background: #f5f3ff;
+}
+
+.acct-select__chip--selected {
+  border-color: var(--primary);
+  background: #f5f3ff;
+  color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+}
+
+.acct-select__chip-icon {
+  font-size: 14px;
+}
+
+.acct-select__chip-check {
+  font-size: 14px;
+  margin-left: 2px;
+}

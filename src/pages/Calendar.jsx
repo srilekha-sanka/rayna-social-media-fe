@@ -30,8 +30,7 @@ const CONTENT_TYPE_LABELS = {
 };
 
 function getPlatformMeta(id) {
-  const mappedId = id === 'x' ? 'twitter' : id;
-  return PLATFORMS.find((p) => p.id === mappedId) || { name: id, color: '#6b7280' };
+  return PLATFORMS.find((p) => p.id === id) || { name: id, color: '#6b7280' };
 }
 
 function getMonthDays(year, month) {
