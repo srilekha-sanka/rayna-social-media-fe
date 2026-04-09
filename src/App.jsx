@@ -10,6 +10,10 @@ import Calendar from './pages/Calendar';
 import ContentCalendar from './pages/ContentCalendar';
 import ReviewQueue from './pages/ReviewQueue';
 import Analytics from './pages/Analytics';
+import TopPosts from './pages/analytics/TopPosts';
+import CampaignAnalytics from './pages/analytics/CampaignAnalytics';
+import PostAnalytics from './pages/analytics/PostAnalytics';
+import AccountFeed from './pages/analytics/AccountFeed';
 import Audience from './pages/Audience';
 import Platforms from './pages/Platforms';
 import Settings from './pages/Settings';
@@ -33,6 +37,10 @@ function App() {
         <Route path="/content-calendar" element={<ContentCalendar />} />
         <Route path="/review-queue" element={<ReviewQueue />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/analytics/top-posts" element={<TopPosts />} />
+        <Route path="/analytics/campaigns/:campaignId" element={<CampaignAnalytics />} />
+        <Route path="/analytics/posts/:postId" element={<PostAnalytics />} />
+        <Route path="/analytics/accounts/:accountId" element={<AccountFeed />} />
         <Route path="/audience" element={<Audience />} />
         <Route path="/platforms" element={<Platforms />} />
         <Route path="/settings" element={<Settings />} />

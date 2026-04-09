@@ -7,6 +7,7 @@ const pageTitles = {
   '/studio': 'Content Studio',
   '/studio/carousel': 'Image Carousel',
   '/analytics': 'Analytics',
+  '/analytics/top-posts': 'Top Posts',
   '/campaigns': 'Campaigns',
   '/calendar': 'Calendar',
   '/audience': 'Audience',
@@ -17,7 +18,11 @@ const pageTitles = {
 
 function Header() {
   const { pathname } = useLocation();
-  const title = pageTitles[pathname] || 'Dashboard';
+  const title = pageTitles[pathname]
+    || (pathname.startsWith('/analytics/campaigns/') ? 'Campaign Analytics'
+    : pathname.startsWith('/analytics/posts/') ? 'Post Analytics'
+    : pathname.startsWith('/analytics/accounts/') ? 'Account Feed'
+    : 'Dashboard');
 
   return (
     <header className="header">
