@@ -29,7 +29,7 @@ import '../../styles/pages.css';
 import '../../styles/pipeline.css';
 import '../../styles/studio.css';
 
-const CAROUSEL_PLATFORMS = ['instagram', 'facebook', 'linkedin', 'twitter', 'pinterest', 'whatsapp'];
+const CAROUSEL_PLATFORMS = ['instagram', 'facebook', 'linkedin', 'x', 'pinterest', 'whatsapp'];
 
 function CarouselStudio() {
   const navigate = useNavigate();

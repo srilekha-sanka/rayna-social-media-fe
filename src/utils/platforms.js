@@ -11,22 +11,34 @@ import {
   FaWhatsapp,
   FaTelegram,
   FaRedditAlien,
+  FaBluesky,
 } from 'react-icons/fa6';
 
 export const PLATFORMS = [
   { id: 'instagram', name: 'Instagram', icon: FaInstagram, color: '#E4405F' },
   { id: 'facebook', name: 'Facebook', icon: FaFacebookF, color: '#1877F2' },
-  { id: 'twitter', name: 'X (Twitter)', icon: FaXTwitter, color: '#000000' },
+  { id: 'x', name: 'X (Twitter)', icon: FaXTwitter, color: '#000000' },
   { id: 'tiktok', name: 'TikTok', icon: FaTiktok, color: '#000000' },
   { id: 'youtube', name: 'YouTube', icon: FaYoutube, color: '#FF0000' },
   { id: 'linkedin', name: 'LinkedIn', icon: FaLinkedinIn, color: '#0A66C2' },
   { id: 'pinterest', name: 'Pinterest', icon: FaPinterestP, color: '#BD081C' },
   { id: 'snapchat', name: 'Snapchat', icon: FaSnapchat, color: '#FFFC00' },
   { id: 'threads', name: 'Threads', icon: FaThreads, color: '#000000' },
+  { id: 'bluesky', name: 'Bluesky', icon: FaBluesky, color: '#0085FF' },
   { id: 'whatsapp', name: 'WhatsApp', icon: FaWhatsapp, color: '#25D366' },
   { id: 'telegram', name: 'Telegram', icon: FaTelegram, color: '#0088cc' },
   { id: 'reddit', name: 'Reddit', icon: FaRedditAlien, color: '#FF4500' },
 ];
+
+// Platforms that support OAuth connection via PostForMe
+export const CONNECTABLE_PLATFORMS = [
+  'instagram', 'facebook', 'x', 'linkedin', 'tiktok',
+  'youtube', 'pinterest', 'threads', 'bluesky',
+];
+
+export function getPlatformConfig(platformId) {
+  return PLATFORMS.find((p) => p.id === platformId) || null;
+}
 
 export const CONTENT_TYPES = [
   {

@@ -9,9 +9,9 @@ const stats = [
 ];
 
 const recentPosts = [
-  { id: 1, title: 'Product Launch Announcement', platforms: ['instagram', 'facebook', 'twitter'], engagement: '2.4K', status: 'Published', date: '2026-03-22' },
+  { id: 1, title: 'Product Launch Announcement', platforms: ['instagram', 'facebook', 'x'], engagement: '2.4K', status: 'Published', date: '2026-03-22' },
   { id: 2, title: 'Behind the Scenes Video', platforms: ['tiktok', 'youtube', 'instagram'], engagement: '5.1K', status: 'Published', date: '2026-03-21' },
-  { id: 3, title: 'Customer Spotlight Thread', platforms: ['twitter', 'linkedin', 'threads'], engagement: '892', status: 'Scheduled', date: '2026-03-25' },
+  { id: 3, title: 'Customer Spotlight Thread', platforms: ['x', 'linkedin', 'threads'], engagement: '892', status: 'Scheduled', date: '2026-03-25' },
   { id: 4, title: 'Weekly Tips Carousel', platforms: ['instagram', 'pinterest', 'facebook'], engagement: '-', status: 'Draft', date: '-' },
 ];
 

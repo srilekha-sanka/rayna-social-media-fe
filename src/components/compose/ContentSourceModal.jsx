@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { MdClose } from 'react-icons/md';
 import { composeEntry, pollJob } from '../../services/contentPlan';
 import { resolveStockUrls } from '../../services/stockMedia';
@@ -13,12 +13,6 @@ import '../../styles/compose.css';
 
 const activeJobs = new Map();
 
-/**
- * ContentSourceModal — orchestrates the full create-post flow.
- *
- * On open: if an active job exists for this entry, skips straight to
- * the generating state and resumes polling. Otherwise shows source picker.
- */
 export default function ContentSourceModal({ entry, onClose, onComposed }) {
   const existingJob = activeJobs.get(entry.id);
 
@@ -30,42 +24,51 @@ export default function ContentSourceModal({ entry, onClose, onComposed }) {
   const [stockPayload, setStockPayload] = useState(null);
   const [jobProgress, setJobProgress] = useState(null);
 
-  // Track whether this component instance is still mounted
-  const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
-
-  // ─── Resume polling for an existing job on mount ──────
+  // ─── Resume polling if a job was already running ──────
 
   useEffect(() => {
     if (!existingJob) return;
-    resumePolling(existingJob.jobId, existingJob.templateName);
+
+    let active = true;
+
+    pollAndFinish(existingJob.jobId, existingJob.templateName, existingJob.contentSource, () => active);
+
+    return () => { active = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function resumePolling(jobId, tplName) {
-    setStep(STEP.GENERATING);
-    setComposing(true);
-    setError('');
-    setJobProgress(null);
+  // ─── Core: poll job → extract result → call onComposed ─
 
+  async function pollAndFinish(jobId, tplName, contentSource, isActive) {
     try {
       const completed = await pollJob(jobId, {
         interval: 3000,
         timeout: 600000,
         onProgress: (job) => {
-          if (mountedRef.current) setJobProgress(job.progress || null);
+          if (isActive()) setJobProgress(job.progress || null);
         },
       });
 
       activeJobs.delete(entry.id);
 
-      if (!mountedRef.current) return;
-
+      // Extract result from completed job
       const result = completed.result || completed;
-      handleComposeSuccess(result, tplName);
+      const post = extractPost(result);
+
+      if (!post?.id) {
+        throw new Error('Compose did not return a valid post.');
+      }
+
+      // Always call onComposed — even if unmounted, the parent handles it
+      onComposed({
+        post,
+        entry: result.entry || entry,
+        content_source: result.content_source || contentSource,
+        template_name: result.template_name || tplName || undefined,
+      });
     } catch (err) {
       activeJobs.delete(entry.id);
 
-      if (!mountedRef.current) return;
+      if (!isActive()) return;
 
       setError(err.message);
       setComposing(false);
@@ -107,24 +110,7 @@ export default function ContentSourceModal({ entry, onClose, onComposed }) {
     }
   }
 
-  // ─── Resolve compose result ───────────────────────────
-
-  function handleComposeSuccess(res, tplName) {
-    const post = extractPost(res);
-
-    if (!post?.id) {
-      throw new Error('Compose did not return a valid post.');
-    }
-
-    onComposed({
-      post,
-      entry: res.entry || entry,
-      content_source: source,
-      template_name: tplName || undefined,
-    });
-  }
-
-  // ─── Shared compose call ──────────────────────────────
+  // ─── Compose call ─────────────────────────────────────
 
   async function doCompose(payload, tplName) {
     setTemplateName(tplName || '');
@@ -133,42 +119,39 @@ export default function ContentSourceModal({ entry, onClose, onComposed }) {
     setError('');
     setJobProgress(null);
 
+    // isActive always returns true for non-effect-based calls (user initiated)
+    const alwaysActive = () => true;
+
     try {
       const res = await composeEntry(entry.id, payload);
 
-      // Async flow: BE returned 202 with job_id (template compose)
+      // Async flow: BE returned 202 with job_id
       if (res.job_id) {
-        // Register so we can resume if modal is closed and reopened
         activeJobs.set(entry.id, {
           jobId: res.job_id,
           templateName: tplName || '',
           contentSource: source,
         });
 
-        const completed = await pollJob(res.job_id, {
-          interval: 3000,
-          timeout: 600000,
-          onProgress: (job) => {
-            if (mountedRef.current) setJobProgress(job.progress || null);
-          },
-        });
-
-        activeJobs.delete(entry.id);
-
-        if (!mountedRef.current) return;
-
-        const result = completed.result || completed;
-        handleComposeSuccess(result, tplName);
+        await pollAndFinish(res.job_id, tplName, source, alwaysActive);
         return;
       }
 
-      // Sync flow: BE returned 200 with post directly (skip / no template)
-      handleComposeSuccess(res, tplName);
+      // Sync flow: immediate result (skip / no template)
+      const post = extractPost(res);
+
+      if (!post?.id) {
+        throw new Error('Compose did not return a valid post.');
+      }
+
+      onComposed({
+        post,
+        entry: res.entry || entry,
+        content_source: source,
+        template_name: tplName || undefined,
+      });
     } catch (err) {
       activeJobs.delete(entry.id);
-
-      if (!mountedRef.current) return;
-
       setError(err.message);
       setComposing(false);
       setJobProgress(null);
@@ -176,27 +159,25 @@ export default function ContentSourceModal({ entry, onClose, onComposed }) {
     }
   }
 
-  // ─── Step 2b: Template selected → compose with template ─
+  // ─── Step 2b: Template selected → compose with template
 
   function handleTemplateGenerate({ template_id, template_name, ai_image_prompt, num_images }) {
-    const payload = {
+    doCompose({
       content_source: source,
       template_id,
       ai_image_prompt,
       num_images,
       ...(source === CONTENT_SOURCE.STOCK && stockPayload),
-    };
-    doCompose(payload, template_name);
+    }, template_name);
   }
 
-  // ─── Step 2c: Skip template → compose WITHOUT template ─
+  // ─── Step 2c: Skip template → compose WITHOUT template
 
   function handleSkip() {
-    const payload = {
+    doCompose({
       content_source: source,
       ...(source === CONTENT_SOURCE.STOCK && stockPayload),
-    };
-    doCompose(payload, '');
+    }, '');
   }
 
   // ─── Navigation ────────────────────────────────────────
@@ -217,8 +198,6 @@ export default function ContentSourceModal({ entry, onClose, onComposed }) {
       goToSourceSelect();
     }
   }
-
-  // ─── Render ────────────────────────────────────────────
 
   return (
     <div className="cc__overlay" onClick={onClose}>
