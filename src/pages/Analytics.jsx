@@ -119,7 +119,7 @@ function Analytics() {
           value: formatNum(overview.totals.likes + overview.totals.comments + overview.totals.shares),
           icon: <MdFavorite />,
         },
-        { label: 'Engagement Rate', value: overview.totals.engagement_rate.toFixed(2) + '%', icon: <MdTrendingUp /> },
+        { label: 'Engagement Rate', value: Number(overview.totals.engagement_rate || 0).toFixed(2) + '%', icon: <MdTrendingUp /> },
         { label: 'Total Clicks', value: formatNum(overview.totals.clicks), icon: <MdTouchApp /> },
       ]
     : [];
