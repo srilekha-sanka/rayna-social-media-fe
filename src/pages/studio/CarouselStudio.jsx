@@ -21,7 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   fetchProducts, generateCarousel, pollJob, getMediaUrl,
   submitPost, approvePost, rejectPost, publishPost, schedulePost,
-  checkInstagramCredentials, publishToInstagram,
+  checkInstagramCredentials, publishToInstagram, fetchDesignTemplates,
 } from '../../services/api';
 import { FaInstagram } from 'react-icons/fa6';
 import { PLATFORMS } from '../../utils/platforms';
@@ -57,6 +57,11 @@ function CarouselStudio() {
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(null);
 
+  // ─── Design Templates ──────────────────────────────────
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+
   // ─── Instagram Integration ───────────────────────────
   const [igConnected, setIgConnected] = useState(false);
   const [igLoading, setIgLoading] = useState(false);
@@ -78,7 +83,30 @@ function CarouselStudio() {
     }
   }
 
-  useEffect(() => { loadProducts(); }, []);
+  async function loadTemplates() {
+    try {
+      setTemplatesLoading(true);
+      const res = await fetchDesignTemplates();
+      const list = res.templates || res.payload?.templates || res.data?.templates || (Array.isArray(res) ? res : []);
+      
+      // Filter for images only for the carousel studio
+      const imageTemplates = list.filter(t => t.media_type === 'image');
+      setTemplates(imageTemplates);
+      
+      // Default to "Master Collage" or first template with "collage" in name
+      const defaultTpl = imageTemplates.find(t => t.slug?.includes('collage') || t.name.toLowerCase().includes('collage')) || imageTemplates[0];
+      if (defaultTpl) setSelectedTemplate(defaultTpl);
+    } catch (err) {
+      console.error('Failed to load templates:', err);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }
+
+  useEffect(() => { 
+    loadProducts();
+    loadTemplates();
+  }, []);
 
   // Check Instagram credentials on mount
   useEffect(() => {
@@ -129,6 +157,7 @@ function CarouselStudio() {
         product_id: selectedProduct.id,
         platform,
         slide_count: slideCount,
+        template_id: selectedTemplate?.id,
       });
 
       // If backend returned the full result directly (no job_id), use it
@@ -931,6 +960,55 @@ function CarouselStudio() {
             </div>
           )}
 
+          {/* Design Style Selector */}
+          <div className="panel" style={{ marginTop: 20 }}>
+            <div className="panel__header">
+              <div className="panel__title">
+                <span className="panel__title-icon panel__title-icon--pink"><MdAutoAwesome /></span>
+                Design Style (WOW Factor)
+              </div>
+            </div>
+            <div className="panel__body" style={{ padding: '16px 20px' }}>
+              {templatesLoading ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text-secondary)' }}>
+                  <div className="generating-spinner" style={{ width: 16, height: 16, borderWidth: 2, margin: 0 }} />
+                  Loading templates...
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+                  <div
+                    className={`template-chip${!selectedTemplate ? ' template-chip--selected' : ''}`}
+                    onClick={() => setSelectedTemplate(null)}
+                    style={{
+                      padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border)',
+                      cursor: 'pointer', textAlign: 'center', background: !selectedTemplate ? '#f5f3ff' : '#fff',
+                      transition: 'all 0.2s', borderColor: !selectedTemplate ? 'var(--primary)' : 'var(--border)',
+                    }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>None</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Basic Overlay</div>
+                  </div>
+                  {templates.map((tpl) => (
+                    <div
+                      key={tpl.id}
+                      className={`template-chip${selectedTemplate?.id === tpl.id ? ' template-chip--selected' : ''}`}
+                      onClick={() => setSelectedTemplate(tpl)}
+                      style={{
+                        padding: '12px 14px', borderRadius: 12, border: '2px solid var(--border)',
+                        cursor: 'pointer', textAlign: 'center', background: selectedTemplate?.id === tpl.id ? '#eef2ff' : '#fff',
+                        transition: 'all 0.2s', borderColor: selectedTemplate?.id === tpl.id ? '#4f46e5' : 'var(--border)',
+                        boxShadow: selectedTemplate?.id === tpl.id ? '0 4px 12px rgba(79, 70, 229, 0.15)' : 'none',
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 800, color: selectedTemplate?.id === tpl.id ? '#4f46e5' : 'var(--text-primary)' }}>{tpl.name}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tpl.layout === 'collage' ? 'AI Collage' : 'Cinematic WOW'}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Generate Button */}
           <div style={{ marginTop: 24 }}>
             <button
@@ -942,7 +1020,7 @@ function CarouselStudio() {
                 ...(!selectedProduct ? { opacity: 0.5, pointerEvents: 'none' } : {}),
               }}
             >
-              <MdAutoAwesome /> Generate Carousel
+              <MdAutoAwesome /> {selectedTemplate ? 'Generate WOW Poster' : 'Generate Carousel'}
             </button>
             {!selectedProduct && (
               <span style={{ marginLeft: 14, fontSize: 12, color: 'var(--text-secondary)' }}>

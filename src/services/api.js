@@ -179,6 +179,12 @@ export async function fetchProductById(id) {
   return res.data || res.payload;
 }
 
+// ─── Design Templates ──────────────────────────────────
+export async function fetchDesignTemplates() {
+  const res = await request('/content-studio/design-templates');
+  return res.payload || res.data || [];
+}
+
 // ─── Campaigns ──────────────────────────────────────────
 export async function fetchCampaigns() {
   const res = await request('/campaigns');
