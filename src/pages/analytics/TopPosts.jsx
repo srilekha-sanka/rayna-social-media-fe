@@ -159,65 +159,107 @@ function TopPosts() {
 
       {!loading && posts.length > 0 && (
         <>
-          <div className="an__posts-grid">
-            {posts.map((post, idx) => {
-              const rank = (pagination.page - 1) * 10 + idx + 1;
-              const thumb = post.media_urls?.[0] ? getMediaUrl(post.media_urls[0]) : null;
-              return (
-                <div
-                  key={post.id}
-                  className="an__post-card"
-                  onClick={() => navigate(`/analytics/posts/${post.id}`)}
-                >
-                  <span className="an__post-rank">#{rank}</span>
-                  {thumb ? (
-                    <img className="an__post-thumb" src={thumb} alt="" loading="lazy" />
-                  ) : (
-                    <div className="an__post-thumb-placeholder">&#128247;</div>
-                  )}
-                  <div className="an__post-body">
-                    {post.campaign && (
-                      <div className="an__post-campaign">{post.campaign.name}</div>
-                    )}
-                    <div className="an__post-platforms">
-                      {post.platforms.map((pid) => {
-                        const cfg = getPlatformConfig(pid);
-                        if (!cfg) return null;
-                        const Icon = cfg.icon;
-                        return (
-                          <span
-                            key={pid}
-                            className="an__post-platform-icon"
-                            title={cfg.name}
-                            style={{
-                              background: cfg.color === '#000000' ? '#1a1a2e15' : cfg.color + '15',
-                              color: cfg.color === '#000000' ? '#1a1a2e' : cfg.color,
-                            }}
-                          >
-                            <Icon />
-                          </span>
-                        );
-                      })}
-                    </div>
-                    <p className="an__post-caption">{post.base_content}</p>
-                    <div className="an__post-metrics">
-                      <div className="an__post-metric">
-                        <span className="an__post-metric-value">{formatNum(post.metrics.total_engagement)}</span>
-                        <span className="an__post-metric-label">Engagement</span>
-                      </div>
-                      <div className="an__post-metric">
-                        <span className="an__post-metric-value">{formatNum(post.metrics.reach)}</span>
-                        <span className="an__post-metric-label">Reach</span>
-                      </div>
-                      <div className="an__post-metric">
-                        <span className="an__post-metric-value">{formatNum(post.metrics.clicks)}</span>
-                        <span className="an__post-metric-label">Clicks</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="an__posts-table-wrap">
+            <table className="an__posts-table">
+              <thead>
+                <tr>
+                  <th className="an__posts-th an__posts-th--rank">#</th>
+                  <th className="an__posts-th an__posts-th--post">Post</th>
+                  <th className="an__posts-th an__posts-th--platform">Platform</th>
+                  <th className="an__posts-th an__posts-th--metric">Engagement</th>
+                  <th className="an__posts-th an__posts-th--metric">Likes</th>
+                  <th className="an__posts-th an__posts-th--metric">Comments</th>
+                  <th className="an__posts-th an__posts-th--metric">Shares</th>
+                  <th className="an__posts-th an__posts-th--metric">Saves</th>
+                  <th className="an__posts-th an__posts-th--metric">Reach</th>
+                  <th className="an__posts-th an__posts-th--metric">Impressions</th>
+                  <th className="an__posts-th an__posts-th--metric">Clicks</th>
+                  <th className="an__posts-th an__posts-th--metric">Video Views</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.map((post, idx) => {
+                  const rank = (pagination.page - 1) * 10 + idx + 1;
+                  const thumb = post.media_urls?.[0] ? getMediaUrl(post.media_urls[0]) : null;
+                  const m = post.metrics || {};
+                  return (
+                    <tr
+                      key={post.id}
+                      className="an__posts-row"
+                      onClick={() => navigate(`/analytics/posts/${post.id}`)}
+                    >
+                      <td className="an__posts-td an__posts-td--rank">
+                        <span className="an__posts-rank-badge">#{rank}</span>
+                      </td>
+                      <td className="an__posts-td an__posts-td--post">
+                        <div className="an__posts-post-cell">
+                          {thumb ? (
+                            <img className="an__posts-thumb" src={thumb} alt="" loading="lazy" />
+                          ) : (
+                            <div className="an__posts-thumb-placeholder">&#128247;</div>
+                          )}
+                          <div className="an__posts-post-info">
+                            {post.campaign && (
+                              <span className="an__post-campaign">{post.campaign.name}</span>
+                            )}
+                            <p className="an__posts-caption">{post.base_content}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="an__posts-td an__posts-td--platform">
+                        <div className="an__post-platforms">
+                          {post.platforms.map((pid) => {
+                            const cfg = getPlatformConfig(pid);
+                            if (!cfg) return null;
+                            const Icon = cfg.icon;
+                            return (
+                              <span
+                                key={pid}
+                                className="an__post-platform-icon"
+                                title={cfg.name}
+                                style={{
+                                  background: cfg.color === '#000000' ? '#1a1a2e15' : cfg.color + '15',
+                                  color: cfg.color === '#000000' ? '#1a1a2e' : cfg.color,
+                                }}
+                              >
+                                <Icon />
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="an__posts-td an__posts-td--metric">
+                        <span className="an__posts-metric-value">{formatNum(m.total_engagement)}</span>
+                      </td>
+                      <td className="an__posts-td an__posts-td--metric">
+                        <span className="an__posts-metric-value">{formatNum(m.likes)}</span>
+                      </td>
+                      <td className="an__posts-td an__posts-td--metric">
+                        <span className="an__posts-metric-value">{formatNum(m.comments)}</span>
+                      </td>
+                      <td className="an__posts-td an__posts-td--metric">
+                        <span className="an__posts-metric-value">{formatNum(m.shares)}</span>
+                      </td>
+                      <td className="an__posts-td an__posts-td--metric">
+                        <span className="an__posts-metric-value">{formatNum(m.saves)}</span>
+                      </td>
+                      <td className="an__posts-td an__posts-td--metric">
+                        <span className="an__posts-metric-value">{formatNum(m.reach)}</span>
+                      </td>
+                      <td className="an__posts-td an__posts-td--metric">
+                        <span className="an__posts-metric-value">{formatNum(m.impressions)}</span>
+                      </td>
+                      <td className="an__posts-td an__posts-td--metric">
+                        <span className="an__posts-metric-value">{formatNum(m.clicks)}</span>
+                      </td>
+                      <td className="an__posts-td an__posts-td--metric">
+                        <span className="an__posts-metric-value">{formatNum(m.video_views)}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
           {/* Pagination */}

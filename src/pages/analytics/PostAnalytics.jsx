@@ -115,7 +115,7 @@ function PostAnalytics() {
   const kpis = [
     { label: 'Total Reach', value: formatNum(totals.reach), icon: <MdVisibility /> },
     { label: 'Total Engagement', value: formatNum(totals.likes + totals.comments + totals.shares), icon: <MdFavorite /> },
-    { label: 'Engagement Rate', value: totals.engagement_rate.toFixed(2) + '%', icon: <MdTrendingUp /> },
+    { label: 'Engagement Rate', value: Number(totals.engagement_rate || 0).toFixed(2) + '%', icon: <MdTrendingUp /> },
     { label: 'Total Clicks', value: formatNum(totals.clicks), icon: <MdTouchApp /> },
   ];
 
@@ -327,8 +327,8 @@ function PostAnalytics() {
                 </div>
                 <div className="an__platform-detail-card">
                   <label>Eng. Rate</label>
-                  <span style={{ color: activePlatform.engagement_rate > 5 ? 'var(--success)' : activePlatform.engagement_rate >= 2 ? 'var(--warning)' : 'var(--error)' }}>
-                    {activePlatform.engagement_rate.toFixed(2)}%
+                  <span style={{ color: Number(activePlatform.engagement_rate || 0) > 5 ? 'var(--success)' : Number(activePlatform.engagement_rate || 0) >= 2 ? 'var(--warning)' : 'var(--error)' }}>
+                    {Number(activePlatform.engagement_rate || 0).toFixed(2)}%
                   </span>
                 </div>
                 {activePlatform.video_views > 0 && (

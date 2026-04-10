@@ -89,7 +89,7 @@ function CampaignAnalytics() {
   const kpis = [
     { label: 'Total Reach', value: formatNum(totals.reach), icon: <MdVisibility /> },
     { label: 'Total Engagement', value: formatNum(totals.likes + totals.comments + totals.shares), icon: <MdFavorite /> },
-    { label: 'Engagement Rate', value: totals.engagement_rate.toFixed(2) + '%', icon: <MdTrendingUp /> },
+    { label: 'Engagement Rate', value: Number(totals.engagement_rate || 0).toFixed(2) + '%', icon: <MdTrendingUp /> },
     { label: 'Total Clicks', value: formatNum(totals.clicks), icon: <MdTouchApp /> },
   ];
 
