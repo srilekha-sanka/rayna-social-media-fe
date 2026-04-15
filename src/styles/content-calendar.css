@@ -1046,6 +1046,411 @@
   font-size: 14px;
 }
 
+/* ─── Regenerate Feature ─────────────────────────────── */
+
+.pc__media-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.pc__media-header .pc__media-label {
+  margin-bottom: 0;
+}
+
+.pc__media-style-badge {
+  font-size: 11px;
+  color: var(--primary);
+  background: rgba(124, 58, 237, 0.08);
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pc__regen-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  background: transparent;
+  border: 1.5px solid var(--primary);
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.pc__regen-toggle:hover:not(:disabled) {
+  background: var(--primary);
+  color: #fff;
+}
+
+.pc__regen-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pc__regen-toggle svg {
+  font-size: 15px;
+}
+
+/* Image hover overlay */
+.pc__slide-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+
+.pc__slide-card:hover .pc__slide-overlay {
+  opacity: 1;
+}
+
+.pc__slide-overlay svg {
+  color: #fff;
+  font-size: 26px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* ── Slide delete button ─────────────────────────────── */
+
+.pc__slide-delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s, background 0.15s;
+  z-index: 3;
+}
+
+.pc__slide-card:hover .pc__slide-delete-btn {
+  opacity: 1;
+}
+
+.pc__slide-delete-btn:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(220, 38, 38, 0.85);
+  transform: scale(1.1);
+}
+
+.pc__slide-delete-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pc__slide-delete-btn svg {
+  font-size: 14px;
+}
+
+/* ── Centered confirm overlay banner ─────────────────── */
+
+.pc__slide-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  z-index: 5;
+  animation: pc-confirm-fade 0.2s ease-out;
+}
+
+@keyframes pc-confirm-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pc__slide-confirm-icon {
+  font-size: 28px;
+  color: #fca5a5;
+}
+
+.pc__slide-confirm-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.pc__slide-confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.pc__slide-confirm-yes,
+.pc__slide-confirm-no {
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.pc__slide-confirm-yes {
+  background: #dc2626;
+  color: #fff;
+}
+
+.pc__slide-confirm-yes:hover {
+  background: #b91c1c;
+  transform: scale(1.04);
+}
+
+.pc__slide-confirm-no {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.pc__slide-confirm-no:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Shimmer skeleton for regenerating images */
+.pc__slide-card--skeleton .pc__slide-card-img-wrap {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary, #f0f0f0) 25%,
+    var(--bg-tertiary, #e0e0e0) 50%,
+    var(--bg-secondary, #f0f0f0) 75%
+  );
+  background-size: 200% 100%;
+  animation: pc-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes pc-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Inline Regenerate Panel ──────────────────────────── */
+
+.pc__regen-panel {
+  margin-top: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--bg-secondary, #fafafa);
+  animation: pc-regen-slide 0.25s ease-out;
+}
+
+@keyframes pc-regen-slide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pc__regen-panel-header {
+  margin-bottom: 14px;
+}
+
+.pc__regen-panel-header h5 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 3px 0;
+  color: var(--text-primary);
+}
+
+.pc__regen-panel-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Template horizontal scroll strip */
+.pc__regen-templates {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 14px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pc__regen-templates::-webkit-scrollbar {
+  height: 4px;
+}
+
+.pc__regen-templates::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pc__regen-templates::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* Template card */
+.pc__regen-tpl {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 92px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: var(--bg-primary, #fff);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.pc__regen-tpl:hover {
+  border-color: rgba(124, 58, 237, 0.3);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
+}
+
+.pc__regen-tpl--selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.pc__regen-tpl-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+}
+
+.pc__regen-tpl-thumb--fallback {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+}
+
+.pc__regen-tpl-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.3;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc__regen-tpl-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 16px;
+  color: var(--primary);
+  background: #fff;
+  border-radius: 50%;
+}
+
+/* Skeleton loading for templates */
+.pc__regen-templates-loading {
+  display: flex;
+  gap: 10px;
+  padding: 4px 2px 14px;
+}
+
+.pc__regen-tpl-skeleton {
+  flex-shrink: 0;
+  width: 92px;
+  height: 100px;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary, #f0f0f0) 25%,
+    var(--bg-tertiary, #e8e8e8) 50%,
+    var(--bg-secondary, #f0f0f0) 75%
+  );
+  background-size: 200% 100%;
+  animation: pc-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Prompt input */
+.pc__regen-prompt {
+  margin-bottom: 14px;
+}
+
+.pc__regen-prompt label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.pc__regen-prompt textarea {
+  width: 100%;
+  font-size: 13px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-primary, #fff);
+  resize: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.pc__regen-prompt textarea:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+/* Actions footer */
+.pc__regen-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pc__regen-scratch-link {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.pc__regen-scratch-link:hover {
+  color: var(--primary);
+}
+
+.pc__regen-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .pc__slide-card-overlay {
   position: absolute;
   inset: 0;

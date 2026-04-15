@@ -1,25 +1,26 @@
-import { PLATFORMS } from '../utils/platforms';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PLATFORMS, getPlatformConfig } from '../utils/platforms';
+import { fetchDashboard } from '../services/analytics';
 import '../styles/pages.css';
 
-const stats = [
-  { label: 'Total Followers', value: '124.5K', change: '+12.5%', trend: 'up' },
-  { label: 'Engagement Rate', value: '4.8%', change: '+0.6%', trend: 'up' },
-  { label: 'Scheduled Posts', value: '28', change: '+8', trend: 'up' },
-  { label: 'Impressions', value: '289.2K', change: '-2.1%', trend: 'down' },
-];
+function formatNumber(n) {
+  if (n == null) return '-';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
 
-const recentPosts = [
-  { id: 1, title: 'Product Launch Announcement', platforms: ['instagram', 'facebook', 'x'], engagement: '2.4K', status: 'Published', date: '2026-03-22' },
-  { id: 2, title: 'Behind the Scenes Video', platforms: ['tiktok', 'youtube', 'instagram'], engagement: '5.1K', status: 'Published', date: '2026-03-21' },
-  { id: 3, title: 'Customer Spotlight Thread', platforms: ['x', 'linkedin', 'threads'], engagement: '892', status: 'Scheduled', date: '2026-03-25' },
-  { id: 4, title: 'Weekly Tips Carousel', platforms: ['instagram', 'pinterest', 'facebook'], engagement: '-', status: 'Draft', date: '-' },
-];
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 function PlatformIcons({ platformIds }) {
   return (
-    <div style={{ display: 'flex', gap: '4px' }}>
+    <div style={{ display: 'flex', gap: 4 }}>
       {platformIds.map((id) => {
-        const p = PLATFORMS.find((pl) => pl.id === id);
+        const p = getPlatformConfig(id) || PLATFORMS.find((pl) => pl.id === id);
         if (!p) return null;
         const Icon = p.icon;
         return (
@@ -30,7 +31,7 @@ function PlatformIcons({ platformIds }) {
               width: 26,
               height: 26,
               borderRadius: '50%',
-              background: p.color === '#000000' ? '#1a1a2e' : p.color + '15',
+              background: p.color === '#000000' ? '#1a1a2e15' : p.color + '15',
               color: p.color === '#000000' ? '#1a1a2e' : p.color,
               display: 'flex',
               alignItems: 'center',
@@ -47,21 +48,78 @@ function PlatformIcons({ platformIds }) {
 }
 
 function Dashboard() {
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetchDashboard();
+        if (!cancelled) setData(res);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div>
+        <div className="page-header">
+          <h2>Welcome back!</h2>
+          <p>Loading your dashboard...</p>
+        </div>
+        <div className="stats-grid">
+          {[1, 2, 3, 4].map((i) => (
+            <div className="stat-card" key={i} style={{ minHeight: 90, opacity: 0.5 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <div className="page-header">
+          <h2>Welcome back!</h2>
+          <p style={{ color: 'var(--error)' }}>Failed to load dashboard: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { stats, connected_platforms, recent_posts } = data;
+
+  const statCards = [
+    { label: 'Total Followers', value: formatNumber(stats.total_followers) },
+    { label: 'Engagement Rate', value: stats.engagement_rate + '%' },
+    { label: 'Scheduled Posts', value: String(stats.scheduled_posts) },
+    { label: 'Total Reach', value: formatNumber(stats.total_reach) },
+  ];
+
+  const connectedCount = connected_platforms?.length || 0;
+
   return (
     <div>
       <div className="page-header">
         <h2>Welcome back!</h2>
-        <p>Here's what's happening across your 12 social channels.</p>
+        <p>Here's what's happening across your {connectedCount} connected channel{connectedCount !== 1 ? 's' : ''}.</p>
       </div>
 
+      {/* Stat Cards */}
       <div className="stats-grid">
-        {stats.map((stat) => (
+        {statCards.map((stat) => (
           <div className="stat-card" key={stat.label}>
             <p className="stat-card__label">{stat.label}</p>
             <p className="stat-card__value">{stat.value}</p>
-            <span className={`stat-card__change stat-card__change--${stat.trend}`}>
-              {stat.change}
-            </span>
           </div>
         ))}
       </div>
@@ -70,57 +128,72 @@ function Dashboard() {
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card__header">
           <h3 className="card__title">Connected Platforms</h3>
-          <button className="btn btn--outline btn--sm">Manage</button>
+          <button className="btn btn--outline btn--sm" onClick={() => navigate('/platforms')}>Manage</button>
         </div>
-        <div className="platform-grid">
-          {PLATFORMS.map((p) => {
-            const Icon = p.icon;
-            return (
-              <div key={p.id} className="platform-chip platform-chip--selected">
-                <span className="platform-chip__icon" style={{ color: p.color }}>
-                  <Icon />
-                </span>
-                {p.name}
-              </div>
-            );
-          })}
-        </div>
+        {connected_platforms?.length > 0 ? (
+          <div className="platform-grid">
+            {connected_platforms.map((acct) => {
+              const p = getPlatformConfig(acct.platform) || PLATFORMS.find((pl) => pl.id === acct.platform);
+              if (!p) return null;
+              const Icon = p.icon;
+              const isActive = acct.status === 'CONNECTED';
+              return (
+                <div
+                  key={acct.id}
+                  className={`platform-chip ${isActive ? 'platform-chip--selected' : ''}`}
+                  style={!isActive ? { opacity: 0.45 } : undefined}
+                >
+                  <span className="platform-chip__icon" style={{ color: isActive ? p.color : 'var(--text-secondary)' }}>
+                    <Icon />
+                  </span>
+                  {acct.display_name || acct.username || p.name}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>No platforms connected yet.</p>
+            <button className="btn btn--primary btn--sm" style={{ marginTop: 12 }} onClick={() => navigate('/platforms')}>
+              Connect a Platform
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Recent Posts */}
       <div className="card">
         <div className="card__header">
           <h3 className="card__title">Recent Posts</h3>
-          <button className="btn btn--outline btn--sm">View All</button>
         </div>
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Platforms</th>
-                <th>Engagement</th>
-                <th>Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentPosts.map((post) => (
-                <tr key={post.id}>
-                  <td style={{ fontWeight: 600 }}>{post.title}</td>
-                  <td><PlatformIcons platformIds={post.platforms} /></td>
-                  <td>{post.engagement}</td>
-                  <td>
-                    <span className={`badge badge--${post.status === 'Published' ? 'active' : post.status === 'Scheduled' ? 'paused' : 'draft'}`}>
-                      {post.status}
-                    </span>
-                  </td>
-                  <td>{post.date}</td>
+        {recent_posts?.length > 0 ? (
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Platforms</th>
+                  <th>Engagement</th>
+                  <th>Published</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {recent_posts.map((post) => (
+                  <tr key={post.id}>
+                    <td style={{ fontWeight: 600 }}>{post.title}</td>
+                    <td><PlatformIcons platformIds={post.platforms || []} /></td>
+                    <td>{formatNumber(post.engagement)}</td>
+                    <td>{formatDate(post.published_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>No posts yet. Create your first post in Content Studio!</p>
+          </div>
+        )}
       </div>
     </div>
   );

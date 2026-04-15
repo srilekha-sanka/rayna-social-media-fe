@@ -111,11 +111,19 @@ export function logout() {
 }
 
 // ─── Products ───────────────────────────────────────────
-export async function fetchProducts({ search, city, category } = {}) {
-  const params = new URLSearchParams({ limit: '100' });
+export async function fetchProductTypes() {
+  const res = await request('/products/types');
+  const types = res.data?.product_types || res.payload?.product_types || res.product_types || [];
+  return Array.isArray(types) ? types : [];
+}
+
+export async function fetchProducts({ search, city, category, product_type, page, limit } = {}) {
+  const params = new URLSearchParams({ limit: String(limit || 100) });
   if (search) params.set('search', search);
   if (city) params.set('city', city);
   if (category) params.set('category', category);
+  if (product_type) params.set('product_type', product_type);
+  if (page) params.set('page', String(page));
   const res = await request(`/products?${params.toString()}`);
   // Handle all possible response shapes:
   // { data: { products: [] } } or { payload: { products: [] } } or { data: [] } or { products: [] }
@@ -212,6 +220,11 @@ export async function updatePost(postId, payload) {
   return res.payload || res.data;
 }
 
+export async function removePostMedia(postId, index) {
+  const res = await request(`/posts/${postId}/media/${index}`, { method: 'DELETE' });
+  return res.payload || res.data;
+}
+
 export async function submitPost(postId) {
   const res = await request(`/posts/${postId}/submit`, { method: 'POST' });
   return res.payload || res.data;
@@ -288,6 +301,42 @@ export async function disconnectSocialAccount(id) {
 
 export async function refreshSocialAccount(id) {
   const res = await request(`/social-accounts/${id}/refresh`, { method: 'POST' });
+  return res.data || res.payload || res;
+}
+
+// ─── Profile ───────────────────────────────────────────
+
+export async function fetchProfile() {
+  const res = await request('/profile');
+  return res.data || res.payload || res;
+}
+
+export async function updateProfile(fields) {
+  const res = await request('/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(fields),
+  });
+  return res.data || res.payload || res;
+}
+
+export async function uploadProfilePhoto(file) {
+  const url = `${API_BASE}/profile/photo`;
+  const form = new FormData();
+  form.append('photo', file);
+
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: form,
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Photo upload failed');
+  return data.data || data.payload || data;
+}
+
+export async function removeProfilePhoto() {
+  const res = await request('/profile/photo', { method: 'DELETE' });
   return res.data || res.payload || res;
 }
 

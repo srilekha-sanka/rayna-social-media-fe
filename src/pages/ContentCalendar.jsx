@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PLATFORMS } from '../utils/platforms';
-import { fetchProducts } from '../services/api';
+import { fetchProducts, fetchProductTypes } from '../services/api';
 import {
   generatePlan,
   fetchPlans,
@@ -21,8 +21,9 @@ import {
   bulkSchedule,
   autoSchedule,
   pollJob,
+  fetchDesignTemplates,
 } from '../services/contentPlan';
-import { updatePost, submitPost, schedulePost, publishPost, getMediaUrl } from '../services/api';
+import { updatePost, submitPost, schedulePost, publishPost, getMediaUrl, removePostMedia } from '../services/api';
 import {
   MdAdd,
   MdAutoAwesome,
@@ -692,7 +693,7 @@ export default function ContentCalendar() {
         <ContentSourceModal
           entry={sourcePickerEntry}
           onClose={() => setSourcePickerEntry(null)}
-          onComposed={({ post, entry: updatedEntry, template_name }) => {
+          onComposed={({ post, entry: updatedEntry, content_source, template_name }) => {
             setSourcePickerEntry(null);
             // Open PostComposer with the newly composed entry
             setComposingEntry({
@@ -700,6 +701,7 @@ export default function ContentCalendar() {
               ...updatedEntry,
               status: 'COMPOSING',
               post,
+              _content_source: content_source || null,
               _template_name: template_name || null,
             });
             showToast('Post created — now edit your content');
@@ -833,6 +835,7 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
     end_date: '',
     platforms: [],
     product_ids: [],
+    product_type: '',
     include_festivals: true,
     include_engagement: true,
     posts_per_day: 1,
@@ -846,13 +849,17 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
   });
   const [productSearch, setProductSearch] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productTypes, setProductTypes] = useState([]);
   const [formError, setFormError] = useState('');
   const [progress, setProgress] = useState(null); // { completed, total }
 
-  async function searchProducts(q) {
+  async function searchProducts(q, productType) {
     setLoadingProducts(true);
     try {
-      const res = await fetchProducts({ search: q || undefined });
+      const res = await fetchProducts({
+        search: q || undefined,
+        product_type: productType || undefined,
+      });
       setProducts(Array.isArray(res) ? res : res.data || []);
     } catch {
       // ignore
@@ -862,14 +869,14 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
   }
 
   useEffect(() => {
-    searchProducts('');
+    searchProducts('', form.product_type);
+    fetchProductTypes().then(setProductTypes).catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!productSearch) return;
-    const t = setTimeout(() => searchProducts(productSearch), 300);
+    const t = setTimeout(() => searchProducts(productSearch, form.product_type), 300);
     return () => clearTimeout(t);
-  }, [productSearch]);
+  }, [productSearch, form.product_type]);
 
   function togglePlatform(id) {
     setForm((f) => ({
@@ -904,6 +911,12 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
     try {
       const payload = { ...form };
       if (payload.post_types.length === 0) delete payload.post_types;
+      // product_type / product_ids rules:
+      // - If product_type selected + no specific products → send only product_type
+      // - If no product_type + specific products → send only product_ids
+      // - If both → send both
+      if (!payload.product_type) delete payload.product_type;
+      if (payload.product_ids.length === 0) delete payload.product_ids;
       const res = await generatePlan(payload);
       // Async job pattern: backend returns { job_id, status: "PROCESSING" }
       if (res.job_id) {
@@ -989,6 +1002,22 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
                 );
               })}
             </div>
+          </div>
+
+          <div className="cc__form-group">
+            <label>Product Type</label>
+            <select
+              value={form.product_type}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm((f) => ({ ...f, product_type: val, product_ids: [] }));
+              }}
+            >
+              <option value="">All Types</option>
+              {productTypes.map((t) => (
+                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+              ))}
+            </select>
           </div>
 
           <div className="cc__form-group">
@@ -1171,6 +1200,7 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
   const [form, setForm] = useState({
     platforms: plan.platforms || [],
     product_ids: [],
+    product_type: '',
     posts_per_day: 1,
     tone: 'adventurous',
     primary_goal: 'bookings',
@@ -1180,14 +1210,18 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
   });
   const [productSearch, setProductSearch] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productTypes, setProductTypes] = useState([]);
   const [filling, setFilling] = useState(false);
   const [formError, setFormError] = useState('');
   const [progress, setProgress] = useState(null); // { completed, total }
 
-  async function searchProducts(q) {
+  async function searchProducts(q, productType) {
     setLoadingProducts(true);
     try {
-      const res = await fetchProducts({ search: q || undefined });
+      const res = await fetchProducts({
+        search: q || undefined,
+        product_type: productType || undefined,
+      });
       setProducts(Array.isArray(res) ? res : res.data || []);
     } catch {
       // ignore
@@ -1197,14 +1231,14 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
   }
 
   useEffect(() => {
-    searchProducts('');
+    searchProducts('', form.product_type);
+    fetchProductTypes().then(setProductTypes).catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!productSearch) return;
-    const t = setTimeout(() => searchProducts(productSearch), 300);
+    const t = setTimeout(() => searchProducts(productSearch, form.product_type), 300);
     return () => clearTimeout(t);
-  }, [productSearch]);
+  }, [productSearch, form.product_type]);
 
   function togglePlatform(id) {
     setForm((f) => ({
@@ -1239,6 +1273,8 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
     try {
       const payload = { ...form };
       if (payload.post_types.length === 0) delete payload.post_types;
+      if (!payload.product_type) delete payload.product_type;
+      if (payload.product_ids.length === 0) delete payload.product_ids;
       const res = await generateEntries(plan.id, payload);
       // Async job pattern
       if (res.job_id) {
@@ -1292,6 +1328,22 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
                 );
               })}
             </div>
+          </div>
+
+          <div className="cc__form-group">
+            <label>Product Type</label>
+            <select
+              value={form.product_type}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm((f) => ({ ...f, product_type: val, product_ids: [] }));
+              }}
+            >
+              <option value="">All Types</option>
+              {productTypes.map((t) => (
+                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+              ))}
+            </select>
           </div>
 
           <div className="cc__form-group">
@@ -1563,6 +1615,39 @@ function PostComposer({ entry, onClose, onDone }) {
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [lightboxUrls, setLightboxUrls] = useState([]);
 
+  // ─── Regenerate states ──────────────────────────────────
+  const [regenerating, setRegenerating] = useState(false);
+  const [showRegenPanel, setShowRegenPanel] = useState(false);
+  const [regenTemplates, setRegenTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [regenTemplateId, setRegenTemplateId] = useState(null);
+  const [regenPrompt, setRegenPrompt] = useState('');
+  const [activeTemplateName, setActiveTemplateName] = useState(entry._template_name || '');
+
+  // ─── Remove slide states ───────────────────────────────
+  const [removingSlide, setRemovingSlide] = useState(false);
+  const [confirmRemoveIndex, setConfirmRemoveIndex] = useState(null);
+
+  async function handleRemoveSlide(index) {
+    if (!postId || removingSlide) return;
+    setRemovingSlide(true);
+    setConfirmRemoveIndex(null);
+
+    // Optimistic removal
+    const prev = [...mediaUrls];
+    setMediaUrls((urls) => urls.filter((_, i) => i !== index));
+
+    try {
+      const updated = await removePostMedia(postId, index);
+      if (updated?.media_urls) setMediaUrls(updated.media_urls);
+    } catch (err) {
+      setMediaUrls(prev); // rollback
+      setError(err.message);
+    } finally {
+      setRemovingSlide(false);
+    }
+  }
+
   // On mount: call compose or reuse existing post
   useEffect(() => {
     let cancelled = false;
@@ -1611,6 +1696,58 @@ function PostComposer({ entry, onClose, onDone }) {
     init();
     return () => { cancelled = true; };
   }, [entry]);
+
+  // ─── Regenerate with design template ─────────────────
+  async function openRegenPanel() {
+    setShowRegenPanel(true);
+    if (regenTemplates.length > 0) return;
+    setLoadingTemplates(true);
+    try {
+      const mediaType = ['reel', 'cinematic_video'].includes(entry.post_type) ? 'video' : 'image';
+      const res = await fetchDesignTemplates(mediaType);
+      setRegenTemplates(res.templates || []);
+    } catch {
+      // templates will remain empty — user can still regenerate without one
+    } finally {
+      setLoadingTemplates(false);
+    }
+  }
+
+  async function handleRegenerate() {
+    setRegenerating(true);
+    setError('');
+    try {
+      const contentSource = entry._content_source || (entry.product_id ? 'PRODUCT' : 'AI_GENERATED');
+      const payload = { content_source: contentSource };
+      if (regenTemplateId) payload.template_id = regenTemplateId;
+      if (regenPrompt.trim()) payload.ai_image_prompt = regenPrompt.trim();
+
+      const res = await composeEntry(entry.id, payload);
+
+      let post;
+      if (res.job_id) {
+        const completed = await pollJob(res.job_id, { interval: 3000, timeout: 300000 });
+        const result = completed.result || completed;
+        post = result.post || result;
+      } else {
+        post = res.post || res;
+      }
+
+      if (post?.media_urls?.length) setMediaUrls(post.media_urls);
+      if (post?.id) setPostId(post.id);
+
+      const selectedTpl = regenTemplates.find((t) => t.id === regenTemplateId);
+      if (selectedTpl) setActiveTemplateName(selectedTpl.name);
+
+      setShowRegenPanel(false);
+      setRegenTemplateId(null);
+      setRegenPrompt('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRegenerating(false);
+    }
+  }
 
   async function handleGenerateAI() {
     setGenerating(true);
@@ -1776,25 +1913,144 @@ function PostComposer({ entry, onClose, onDone }) {
               {/* Processed images from compose */}
               {mediaUrls.length > 0 && (
                 <div className="pc__media-gallery">
-                  <label className="pc__media-label">Processed Media</label>
+                  <div className="pc__media-header">
+                    <label className="pc__media-label">Processed Media</label>
+                    {activeTemplateName && (
+                      <span className="pc__media-style-badge">{activeTemplateName}</span>
+                    )}
+                    <button
+                      className="pc__regen-toggle"
+                      onClick={openRegenPanel}
+                      disabled={regenerating || showRegenPanel}
+                    >
+                      <MdRefresh /> Regenerate
+                    </button>
+                  </div>
+
                   <div className="pc__slides-grid">
-                    {mediaUrls.map((url, i) => (
-                      <div className="pc__slide-card" key={i}>
-                        <div className="pc__slide-card-img-wrap">
-                          <img src={url} alt={`Slide ${i + 1}`} className="pc__slide-card-img" onClick={() => { setLightboxUrls(mediaUrls); setLightboxIndex(i); }} style={{ cursor: 'pointer' }} />
+                    {regenerating ? (
+                      Array.from({ length: mediaUrls.length || 4 }, (_, i) => (
+                        <div className="pc__slide-card pc__slide-card--skeleton" key={i}>
+                          <div className="pc__slide-card-img-wrap" />
+                        </div>
+                      ))
+                    ) : (
+                      mediaUrls.map((url, i) => (
+                        <div className="pc__slide-card" key={i}>
+                          <div className="pc__slide-card-img-wrap">
+                            <img src={url} alt={`Slide ${i + 1}`} className="pc__slide-card-img" onClick={() => { setLightboxUrls(mediaUrls); setLightboxIndex(i); }} style={{ cursor: 'pointer' }} />
+                            <div className="pc__slide-overlay" onClick={() => { setLightboxUrls(mediaUrls); setLightboxIndex(i); }}>
+                              <MdVisibility />
+                            </div>
+
+                            {/* Delete slide button */}
+                            {mediaUrls.length > 1 && (
+                              <button
+                                className="pc__slide-delete-btn"
+                                title="Remove slide"
+                                disabled={removingSlide}
+                                onClick={(e) => { e.stopPropagation(); setConfirmRemoveIndex(confirmRemoveIndex === i ? null : i); }}
+                              >
+                                <MdClose />
+                              </button>
+                            )}
+
+                            {/* Centered confirmation banner */}
+                            {confirmRemoveIndex === i && (
+                              <div className="pc__slide-confirm-overlay" onClick={(e) => e.stopPropagation()}>
+                                <MdDelete className="pc__slide-confirm-icon" />
+                                <span className="pc__slide-confirm-text">Remove this slide?</span>
+                                <div className="pc__slide-confirm-actions">
+                                  <button className="pc__slide-confirm-yes" onClick={() => handleRemoveSlide(i)}>Remove</button>
+                                  <button className="pc__slide-confirm-no" onClick={() => setConfirmRemoveIndex(null)}>Cancel</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* ── Inline Regenerate Panel ── */}
+                  {showRegenPanel && (
+                    <div className="pc__regen-panel">
+                      <div className="pc__regen-panel-header">
+                        <h5>Choose Design Style</h5>
+                        <span className="pc__regen-panel-hint">
+                          Select a template to regenerate, or leave unselected to re-roll the current style
+                        </span>
+                      </div>
+
+                      {loadingTemplates ? (
+                        <div className="pc__regen-templates-loading">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <div key={i} className="pc__regen-tpl-skeleton" />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="pc__regen-templates">
+                          {regenTemplates.map((tpl) => (
+                            <button
+                              key={tpl.id}
+                              type="button"
+                              className={`pc__regen-tpl${regenTemplateId === tpl.id ? ' pc__regen-tpl--selected' : ''}`}
+                              onClick={() => setRegenTemplateId(regenTemplateId === tpl.id ? null : tpl.id)}
+                            >
+                              {tpl.thumbnail_url ? (
+                                <img src={tpl.thumbnail_url} alt={tpl.name} className="pc__regen-tpl-thumb" />
+                              ) : (
+                                <div className="pc__regen-tpl-thumb pc__regen-tpl-thumb--fallback" />
+                              )}
+                              <span className="pc__regen-tpl-name">{tpl.name}</span>
+                              {regenTemplateId === tpl.id && <MdCheckCircle className="pc__regen-tpl-check" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="pc__regen-prompt">
+                        <label>
+                          Additional instructions <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(optional)</span>
+                        </label>
+                        <textarea
+                          rows="2"
+                          placeholder='e.g. "Add price in bold, use sunset tones, include logo top-right"'
+                          value={regenPrompt}
+                          onChange={(e) => setRegenPrompt(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="pc__regen-actions">
+                        <button
+                          type="button"
+                          className="pc__regen-scratch-link"
+                          onClick={() => onDone('__RETRY_STYLE__')}
+                        >
+                          Change content source
+                        </button>
+                        <div className="pc__regen-actions-right">
+                          <button
+                            type="button"
+                            className="btn btn--ghost"
+                            onClick={() => { setShowRegenPanel(false); setRegenTemplateId(null); setRegenPrompt(''); }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn--primary"
+                            onClick={handleRegenerate}
+                            disabled={regenerating}
+                          >
+                            {regenerating ? (
+                              <><span className="cc__spinner" /> Regenerating...</>
+                            ) : (
+                              <><MdBolt /> Regenerate Images</>
+                            )}
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                  {entry._template_name && (
-                    <div className="pc__template-tag">
-                      <span className="pc__template-tag-label">Style: {entry._template_name}</span>
-                      <button
-                        className="pc__template-tag-retry"
-                        onClick={() => onDone('__RETRY_STYLE__')}
-                      >
-                        <MdRefresh /> Try Another Style
-                      </button>
                     </div>
                   )}
                 </div>

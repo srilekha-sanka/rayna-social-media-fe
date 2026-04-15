@@ -3,7 +3,6 @@ import {
   MdDashboard,
   MdBarChart,
   MdCalendarMonth,
-  MdPeopleAlt,
   MdSettings,
   MdShare,
   MdAutoAwesome,
@@ -27,7 +26,6 @@ const navItems = [
     section: 'Insights',
     links: [
       { to: '/analytics', label: 'Analytics', icon: <MdBarChart /> },
-      { to: '/audience', label: 'Audience', icon: <MdPeopleAlt /> },
       { to: '/platforms', label: 'Platforms', icon: <MdShare /> },
     ],
   },

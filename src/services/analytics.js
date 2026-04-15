@@ -24,6 +24,15 @@ async function request(endpoint, options = {}) {
   return data.data;
 }
 
+// ─── Dashboard ────────────────────────────────────────
+export async function fetchDashboard({ from, to } = {}) {
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  const qs = params.toString();
+  return request(`/analytics/dashboard${qs ? `?${qs}` : ''}`);
+}
+
 // ─── Overview ──────────────────────────────────────────
 export async function fetchOverview({ from, to } = {}) {
   const params = new URLSearchParams();
