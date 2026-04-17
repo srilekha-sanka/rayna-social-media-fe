@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MdChevronLeft, MdErrorOutline, MdBolt, MdCheckCircle, MdSkipNext } from 'react-icons/md';
+import { MdChevronLeft, MdErrorOutline, MdBolt, MdCheckCircle, MdSkipNext, MdClose } from 'react-icons/md';
 import { fetchDesignTemplates } from '../../services/contentPlan';
 import {
   CONTENT_SOURCE,
@@ -7,6 +7,7 @@ import {
   TEMPLATE_PICKER_COPY,
   getMediaType,
   getProductInfo,
+  getTemplateExample,
 } from './constants';
 import EntryContext from './EntryContext';
 import DesignTemplateCard from './DesignTemplateCard';
@@ -41,6 +42,7 @@ export default function DesignTemplatePicker({
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [additionalPrompt, setAdditionalPrompt] = useState('');
+  const [peekTpl, setPeekTpl] = useState(null);
 
   const mediaType = getMediaType(entry);
   const copy = TEMPLATE_PICKER_COPY[contentSource] || TEMPLATE_PICKER_COPY[CONTENT_SOURCE.AI_GENERATED];
@@ -161,9 +163,22 @@ export default function DesignTemplatePicker({
               template={tpl}
               selected={selectedId === tpl.id}
               onSelect={handleSelect}
+              onPeek={getTemplateExample(tpl) ? setPeekTpl : null}
             />
           ))}
         </div>
+      )}
+
+      {/* Peek lightbox */}
+      {peekTpl && (
+        <TemplatePeek
+          template={peekTpl}
+          onClose={() => setPeekTpl(null)}
+          onUse={() => {
+            setSelectedId(peekTpl.id);
+            setPeekTpl(null);
+          }}
+        />
       )}
 
       {/* Additional instructions */}
@@ -200,6 +215,39 @@ export default function DesignTemplatePicker({
             ? <><span className="cc__spinner" /> Designing...</>
             : <><MdBolt /> Design Poster</>}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Peek Lightbox ───────────────────────────────────────
+
+function TemplatePeek({ template, onClose, onUse }) {
+  const url = getTemplateExample(template);
+
+  return (
+    <div className="csp__peek" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="csp__peek-card" onClick={(e) => e.stopPropagation()}>
+        <button className="csp__peek-close" onClick={onClose} aria-label="Close preview">
+          <MdClose />
+        </button>
+        <div className="csp__peek-image-wrap">
+          {url ? (
+            <img src={url} alt={template.name} className="csp__peek-image" />
+          ) : (
+            <div className="csp__peek-placeholder">No preview available</div>
+          )}
+        </div>
+        <div className="csp__peek-body">
+          <span className="csp__peek-eyebrow">Sample output</span>
+          <h4 className="csp__peek-title">{template.name}</h4>
+          {template.description && (
+            <p className="csp__peek-desc">{template.description}</p>
+          )}
+          <button className="btn btn--primary" onClick={onUse}>
+            <MdBolt /> Use this style
+          </button>
+        </div>
       </div>
     </div>
   );

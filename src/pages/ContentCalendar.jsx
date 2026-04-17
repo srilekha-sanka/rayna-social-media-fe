@@ -22,6 +22,8 @@ import {
   autoSchedule,
   pollJob,
   fetchDesignTemplates,
+  approveAllPlanEntries,
+  submitAllForReview,
 } from '../services/contentPlan';
 import { updatePost, submitPost, schedulePost, publishPost, getMediaUrl, removePostMedia } from '../services/api';
 import {
@@ -58,6 +60,7 @@ import {
   MdRefresh,
 } from 'react-icons/md';
 import ContentSourceModal from '../components/compose/ContentSourceModal';
+import ComposeAllModal from '../components/compose/ComposeAllModal';
 import '../styles/content-calendar.css';
 
 // Backend-supported platforms with correct IDs
@@ -90,12 +93,12 @@ const GOAL_OPTIONS = [
 ];
 
 const POST_TYPE_OPTIONS = [
-  { value: 'reel', label: 'Reel' },
+  { value: 'reel', label: 'Reel', disabled: true },
   { value: 'image', label: 'Image' },
   { value: 'carousel', label: 'Carousel' },
-  { value: 'cinematic_video', label: 'Cinematic Video' },
-  { value: 'story', label: 'Story' },
-  { value: 'text', label: 'Text' },
+  { value: 'cinematic_video', label: 'Cinematic Video', disabled: true },
+  { value: 'story', label: 'Story', disabled: true },
+  { value: 'text', label: 'Text', disabled: true },
 ];
 
 const LANGUAGE_OPTIONS = [
@@ -122,6 +125,7 @@ const STATUS_MAP = {
   DRAFT: { label: 'Draft', cls: 'draft' },
   APPROVED: { label: 'Approved', cls: 'active' },
   COMPOSING: { label: 'Composing', cls: 'paused' },
+  IN_REVIEW: { label: 'In Review', cls: 'paused' },
   READY: { label: 'Ready', cls: 'completed' },
   REJECTED: { label: 'Rejected', cls: 'paused' },
   PUBLISHED: { label: 'Published', cls: 'completed' },
@@ -154,6 +158,7 @@ export default function ContentCalendar() {
   const [editingEntry, setEditingEntry] = useState(null);
   const [composingEntry, setComposingEntry] = useState(null); // entry being composed into a post
   const [sourcePickerEntry, setSourcePickerEntry] = useState(null); // entry for content source selection
+  const [showComposeAllModal, setShowComposeAllModal] = useState(false);
   const [scheduleEntry, setScheduleEntry] = useState(null); // entry opened in schedule panel
   const [showBulkScheduleModal, setShowBulkScheduleModal] = useState(false);
 
@@ -293,6 +298,39 @@ export default function ContentCalendar() {
       showToast(`${selectedEntries.length} entries ${status === 'APPROVED' ? 'approved' : 'skipped'}`);
       setSelectedEntries([]);
       if (activePlan) loadPlanEntries(activePlan);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function handleApproveAll() {
+    if (!activePlan) return;
+    const suggested = entries.filter((e) => e.status === 'SUGGESTED');
+    if (!suggested.length) return;
+    try {
+      const res = await approveAllPlanEntries(activePlan.id);
+      const count = res?.approved_count ?? res?.count ?? suggested.length;
+      showToast(`${count} entries approved`);
+      setSelectedEntries([]);
+      loadPlanEntries(activePlan);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function handleReviewAll() {
+    if (!activePlan) return;
+    try {
+      const res = await submitAllForReview(activePlan.id);
+      const payload = res?.payload ?? res?.data ?? res ?? {};
+      const postsUpdated = payload.posts_updated ?? 0;
+      if (postsUpdated > 0) {
+        showToast(`${postsUpdated} posts submitted for review`);
+      } else {
+        showToast('No draft posts to submit');
+      }
+      setSelectedEntries([]);
+      loadPlanEntries(activePlan);
     } catch (err) {
       setError(err.message);
     }
@@ -450,6 +488,38 @@ export default function ContentCalendar() {
                 ))}
               </select>
             </div>
+            {selectedEntries.length === 0 && entries.some((e) => e.status === 'SUGGESTED') && (
+              <button
+                className="btn btn--sm cc__approve-all"
+                onClick={handleApproveAll}
+                title="Approve all suggested entries"
+              >
+                <MdThumbUp /> Approve All
+              </button>
+            )}
+            {selectedEntries.length === 0
+              && !entries.some((e) => e.status === 'SUGGESTED')
+              && entries.some((e) => e.status === 'APPROVED') && (
+              <button
+                className="btn btn--sm cc__approve-all cc__compose-all"
+                onClick={() => setShowComposeAllModal(true)}
+                title="Compose all approved entries with one design style"
+              >
+                <MdBrush /> Compose All
+              </button>
+            )}
+            {selectedEntries.length === 0
+              && !entries.some((e) => e.status === 'SUGGESTED')
+              && !entries.some((e) => e.status === 'APPROVED')
+              && entries.some((e) => e.status === 'COMPOSING' || e.status === 'IN_REVIEW') && (
+              <button
+                className="btn btn--sm cc__approve-all cc__review-all"
+                onClick={handleReviewAll}
+                title="Submit all composed entries for review"
+              >
+                <MdRateReview /> Review All
+              </button>
+            )}
             {selectedEntries.length > 0 && (() => {
               const selectedReadyEntries = entries.filter(
                 (e) => selectedEntries.includes(e.id) && e.status === 'READY'
@@ -683,6 +753,20 @@ export default function ContentCalendar() {
             setShowEntryModal(false);
             setEditingEntry(null);
             showToast(editingEntry ? 'Entry updated' : 'Entry created');
+            loadPlanEntries(activePlan);
+          }}
+        />
+      )}
+
+      {/* ─── Compose All Modal ───────────────────────────────── */}
+      {showComposeAllModal && activePlan && (
+        <ComposeAllModal
+          planId={activePlan.id}
+          entries={entries.filter((e) => e.status === 'APPROVED')}
+          onClose={() => setShowComposeAllModal(false)}
+          onDone={(msg) => {
+            setShowComposeAllModal(false);
+            showToast(msg);
             loadPlanEntries(activePlan);
           }}
         />
@@ -1107,8 +1191,10 @@ function GeneratePlanModal({ onClose, onGenerated, products, setProducts, genera
                   <button
                     key={pt.value}
                     type="button"
-                    className={`platform-chip${selected ? ' platform-chip--selected' : ''}`}
-                    onClick={() => togglePostType(pt.value)}
+                    className={`platform-chip${selected ? ' platform-chip--selected' : ''}${pt.disabled ? ' platform-chip--disabled' : ''}`}
+                    onClick={() => !pt.disabled && togglePostType(pt.value)}
+                    disabled={pt.disabled}
+                    title={pt.disabled ? 'Coming soon' : undefined}
                   >
                     {pt.label}
                   </button>
@@ -1443,8 +1529,10 @@ function AIFillModal({ plan, onClose, onFilled, products, setProducts }) {
                   <button
                     key={pt.value}
                     type="button"
-                    className={`platform-chip${selected ? ' platform-chip--selected' : ''}`}
-                    onClick={() => togglePostType(pt.value)}
+                    className={`platform-chip${selected ? ' platform-chip--selected' : ''}${pt.disabled ? ' platform-chip--disabled' : ''}`}
+                    onClick={() => !pt.disabled && togglePostType(pt.value)}
+                    disabled={pt.disabled}
+                    title={pt.disabled ? 'Coming soon' : undefined}
                   >
                     {pt.label}
                   </button>
@@ -2075,17 +2163,6 @@ function PostComposer({ entry, onClose, onDone }) {
                   placeholder="#RaynaTours, #Dubai, #DesertSafari"
                   value={hashtags}
                   onChange={(e) => setHashtags(e.target.value)}
-                />
-              </div>
-
-              {/* CTA */}
-              <div className="cc__form-group">
-                <label>Call to Action</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Link in bio to book!"
-                  value={cta}
-                  onChange={(e) => setCta(e.target.value)}
                 />
               </div>
 

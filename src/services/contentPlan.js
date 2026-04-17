@@ -126,6 +126,28 @@ export async function composeEntry(entryId, payload = {}) {
   });
 }
 
+export async function composeAllPlan(planId, payload) {
+  return request(`/content-studio/plans/${planId}/compose-all`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function approveAllPlanEntries(planId, entryIds) {
+  const body = entryIds && entryIds.length > 0 ? { entry_ids: entryIds } : {};
+  return request(`/content-studio/plans/${planId}/approve-all-entries`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function submitAllForReview(planId) {
+  return request(`/content-studio/plans/${planId}/submit-all-for-review`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export async function generateEntryContent(entryId) {
   return request(`/content-studio/entries/${entryId}/generate-content`, {
     method: 'POST',

@@ -45,11 +45,20 @@ export default function SourcePicker({ entry, onSelect }) {
           <p className="csp__source-desc">Search stock photos or upload your own images</p>
         </button>
 
-        {/* ── AI Generate ── */}
-        <button className="csp__source-card" onClick={() => onSelect(CONTENT_SOURCE.AI_GENERATED)}>
+        {/* ── AI Generate (Coming Soon) ── */}
+        <button
+          className="csp__source-card csp__source-card--soon"
+          disabled
+          aria-disabled="true"
+          title="Coming soon"
+        >
+          <span className="csp__soon-badge">
+            <span className="csp__soon-dot" />
+            Coming soon
+          </span>
           <div className="csp__source-icon csp__source-icon--ai"><MdAutoAwesome /></div>
           <h5 className="csp__source-label">AI Generate</h5>
-          <p className="csp__source-desc">AI designs a poster from your product image & brief</p>
+          <p className="csp__source-desc">AI-designed posters from your product image &amp; brief — dropping soon ✨</p>
         </button>
       </div>
     </div>
